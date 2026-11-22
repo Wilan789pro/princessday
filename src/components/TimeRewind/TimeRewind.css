@@ -1,0 +1,251 @@
+.rewind {
+  gap: 18px;
+  justify-content: center;
+  perspective: 900px;
+}
+
+/* ------------------------------------------------ tunnel */
+.rewind__tunnel {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 1.2s ease;
+}
+
+.rewind--rewind .rewind__tunnel {
+  opacity: 1;
+}
+
+.rewind--arrive .rewind__tunnel,
+.rewind--flash .rewind__tunnel {
+  opacity: 0.25;
+}
+
+.rewind__ring {
+  position: absolute;
+  width: 140vmax;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  border: 2px solid rgba(102, 229, 245, 0.35);
+  box-shadow:
+    0 0 30px rgba(57, 139, 255, 0.35),
+    inset 0 0 40px rgba(57, 139, 255, 0.25);
+  /* receding toward the centre = travelling back in time */
+  animation: tunnel-recede 2.9s linear infinite;
+  animation-play-state: paused;
+  will-change: transform, opacity;
+}
+
+.rewind__ring:nth-child(3n) {
+  border-color: rgba(169, 155, 239, 0.3);
+}
+
+.rewind__ring:nth-child(3n + 1) {
+  border-style: dashed;
+}
+
+.rewind--rewind .rewind__ring {
+  animation-play-state: running;
+}
+
+@keyframes tunnel-recede {
+  0% {
+    transform: scale(1.2) rotate(0deg);
+    opacity: 0;
+  }
+  15% {
+    opacity: 0.9;
+  }
+  100% {
+    transform: scale(0.02) rotate(-120deg);
+    opacity: 0;
+  }
+}
+
+/* ------------------------------------------------ hud */
+.rewind__hud {
+  position: relative;
+  z-index: 1;
+}
+
+.rewind__status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+}
+
+.rewind__led {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--c-cyan);
+  box-shadow: 0 0 10px var(--c-cyan);
+  animation: caret 0.8s steps(1) infinite;
+}
+
+.rewind--arrive .rewind__led,
+.rewind--flash .rewind__led {
+  animation: none;
+  background: #fff;
+}
+
+.rewind__delta {
+  margin: 6px 0 0;
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  color: var(--text-faint);
+}
+
+/* ------------------------------------------------ clock */
+.rewind__clock {
+  position: relative;
+  z-index: 1;
+  width: min(62vw, 34vh, 280px);
+  aspect-ratio: 1;
+}
+
+.rewind__face {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  filter: drop-shadow(0 0 24px rgba(57, 139, 255, 0.45));
+}
+
+.rewind__dashes {
+  transform-origin: 100px 100px;
+}
+
+.rewind--rewind .rewind__dashes {
+  animation: spin-rev 1.2s linear infinite;
+}
+
+.rewind__clock-glow {
+  position: absolute;
+  inset: -30%;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(57, 139, 255, 0.25), transparent 65%);
+  z-index: -1;
+}
+
+.rewind--freeze .rewind__clock,
+.rewind--freeze .rewind__digital {
+  animation: shake 0.5s ease 0.15s 2;
+}
+
+.rewind--freeze .rewind__face {
+  filter: drop-shadow(0 0 30px rgba(102, 229, 245, 0.8)) saturate(1.4);
+}
+
+.rewind--arrive .rewind__face {
+  filter: drop-shadow(0 0 40px rgba(168, 223, 255, 0.95));
+}
+
+/* ------------------------------------------------ readout */
+.rewind__readout {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.rewind__digital {
+  font-size: clamp(38px, 12vw, 64px);
+  font-weight: 300;
+  line-height: 1;
+  color: #fff;
+  text-shadow: 0 0 20px rgba(57, 139, 255, 0.8);
+}
+
+.rewind--freeze .rewind__digital {
+  color: var(--c-cyan);
+}
+
+.rewind__calendar {
+  width: 148px;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid rgba(168, 223, 255, 0.25);
+  background: rgba(7, 20, 38, 0.6);
+  box-shadow: 0 16px 40px -14px rgba(0, 0, 0, 0.7), 0 0 30px -10px rgba(57, 139, 255, 0.6);
+}
+
+.rewind__cal-head {
+  position: relative;
+  height: 30px;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, var(--c-electric), var(--c-sapphire));
+  font-family: var(--f-mono);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #fff;
+}
+
+.rewind__cal-head > span {
+  position: absolute;
+}
+
+.rewind__cal-page-wrap {
+  position: relative;
+  height: 98px;
+  perspective: 500px;
+}
+
+.rewind__cal-page {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  transform-origin: top center;
+  background: linear-gradient(180deg, #102b52, #0a1d38);
+  backface-visibility: hidden;
+}
+
+.rewind__cal-day {
+  font-size: 54px;
+  line-height: 0.9;
+  color: #fff;
+}
+
+.rewind__cal-weekday {
+  margin-top: 6px;
+  font-family: var(--f-mono);
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--c-ice);
+}
+
+/* ------------------------------------------------ flash */
+.rewind__flash {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  background: radial-gradient(circle at 50% 45%, #ffffff 0%, #cfefff 25%, #398bff 60%, #1555a6 100%);
+}
+
+@media (min-width: 820px) and (min-height: 640px) {
+  .rewind__readout {
+    flex-direction: row;
+    gap: 34px;
+  }
+}
+
+@media (max-height: 640px) {
+  .rewind {
+    gap: 10px;
+  }
+  .rewind__clock {
+    width: min(48vw, 30vh, 220px);
+  }
+}

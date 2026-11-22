@@ -1,0 +1,89 @@
+.crystal {
+  position: relative;
+  display: inline-block;
+  aspect-ratio: 100 / 120;
+  flex-shrink: 0;
+}
+
+.crystal__svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.crystal--glow .crystal__svg {
+  filter: drop-shadow(0 0 14px color-mix(in srgb, var(--crystal-glow) 70%, transparent))
+    drop-shadow(0 0 40px color-mix(in srgb, var(--crystal-glow) 35%, transparent));
+}
+
+@supports not (color: color-mix(in srgb, red 50%, blue)) {
+  .crystal--glow .crystal__svg {
+    filter: drop-shadow(0 0 16px rgba(57, 139, 255, 0.6));
+  }
+}
+
+.crystal--float {
+  animation: crystal-float 6s ease-in-out infinite;
+}
+
+.crystal__sheen {
+  animation: crystal-sheen 5.5s ease-in-out infinite;
+}
+
+.crystal__sparkle {
+  position: absolute;
+  top: 14%;
+  left: 30%;
+  width: 18%;
+  aspect-ratio: 1;
+  background: radial-gradient(circle, #fff 0 8%, transparent 9%),
+    conic-gradient(from 0deg, transparent 0 20%, rgba(255, 255, 255, 0.9) 25%, transparent 30% 45%,
+      rgba(255, 255, 255, 0.9) 50%, transparent 55% 70%, rgba(255, 255, 255, 0.9) 75%, transparent 80% 95%,
+      rgba(255, 255, 255, 0.9) 100%);
+  -webkit-mask: radial-gradient(circle, #000 30%, transparent 70%);
+  mask: radial-gradient(circle, #000 30%, transparent 70%);
+  animation: crystal-twinkle 3.2s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes crystal-float {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) rotate(-2deg);
+  }
+  50% {
+    transform: translate3d(0, -12px, 0) rotate(2deg);
+  }
+}
+
+@keyframes crystal-sheen {
+  0%,
+  55% {
+    transform: translateX(0) skewX(-20deg);
+  }
+  100% {
+    transform: translateX(200px) skewX(-20deg);
+  }
+}
+
+@keyframes crystal-twinkle {
+  0%,
+  100% {
+    opacity: 0;
+    transform: scale(0.3) rotate(0deg);
+  }
+  45%,
+  55% {
+    opacity: 1;
+    transform: scale(1) rotate(45deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .crystal--float,
+  .crystal__sheen,
+  .crystal__sparkle {
+    animation: none;
+  }
+}

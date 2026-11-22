@@ -1,0 +1,132 @@
+.intro {
+  gap: 10px;
+}
+
+.intro__crystal {
+  position: relative;
+  margin-bottom: 18px;
+  display: grid;
+  place-items: center;
+}
+
+.intro__halo {
+  position: absolute;
+  width: 230%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(57, 139, 255, 0.35), rgba(57, 139, 255, 0.08) 40%, transparent 68%);
+  animation: pulse-glow 6s ease-in-out infinite;
+}
+
+.intro__clock {
+  margin: 6px 0 26px;
+}
+
+.intro__time {
+  display: block;
+  font-size: clamp(54px, 17vw, 112px);
+  font-weight: 300;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: #fff;
+  text-shadow: 0 0 24px rgba(57, 139, 255, 0.75), 0 0 60px rgba(57, 139, 255, 0.35);
+}
+
+.intro__colon {
+  display: inline-block;
+  margin: 0 -0.06em;
+  opacity: 0.55;
+  animation: caret 2s steps(1) infinite;
+}
+
+.intro__sec {
+  color: var(--c-cyan);
+}
+
+.intro__date {
+  margin-top: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-family: var(--f-mono);
+  font-size: 13px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.intro__weekday {
+  color: var(--c-ice);
+}
+
+.intro__dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--c-electric);
+  box-shadow: 0 0 8px var(--c-electric);
+}
+
+.intro__lines {
+  max-width: 30ch;
+  min-height: 150px;
+}
+
+.intro__line1 {
+  font-size: clamp(30px, 8.5vw, 44px);
+  font-style: italic;
+  margin: 0 0 12px;
+}
+
+.intro__line2 {
+  font-size: 17px;
+  margin: 0 0 8px;
+  color: var(--text);
+}
+
+.intro__line3 {
+  font-size: 15px;
+  margin: 0;
+  color: var(--text-dim);
+}
+
+.intro__actions {
+  margin-top: 26px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+
+.intro__hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-faint);
+}
+
+.intro__skip {
+  min-height: 44px;
+  padding: 0 14px;
+  font-family: var(--f-mono);
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+@media (max-height: 700px) {
+  .intro__crystal {
+    margin-bottom: 4px;
+  }
+  .intro__clock {
+    margin-bottom: 14px;
+  }
+  .intro__lines {
+    min-height: 120px;
+  }
+}

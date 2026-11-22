@@ -1,0 +1,55 @@
+.starfield {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: radial-gradient(120% 80% at 50% 0%, #0d2547 0%, var(--c-midnight) 55%, #040b16 100%);
+  transition: background 2.5s ease;
+}
+
+.starfield__canvas {
+  position: absolute;
+  inset: 0;
+}
+
+.starfield__nebula {
+  position: absolute;
+  inset: -20%;
+  background:
+    radial-gradient(40% 30% at 20% 25%, rgba(57, 139, 255, 0.16), transparent 70%),
+    radial-gradient(35% 30% at 80% 70%, rgba(169, 155, 239, 0.12), transparent 70%),
+    radial-gradient(30% 25% at 60% 15%, rgba(102, 229, 245, 0.08), transparent 70%);
+  filter: blur(10px);
+  animation: nebula-drift 40s ease-in-out infinite alternate;
+  transition: opacity 2s ease;
+}
+
+.starfield--warp .starfield__nebula {
+  opacity: 0.4;
+}
+
+.starfield--gold {
+  background: radial-gradient(120% 80% at 50% 10%, #2a2440 0%, #0f1424 55%, #06080f 100%);
+}
+
+.starfield--gold .starfield__nebula {
+  background:
+    radial-gradient(40% 30% at 50% 30%, rgba(242, 198, 109, 0.2), transparent 70%),
+    radial-gradient(35% 30% at 20% 80%, rgba(57, 139, 255, 0.12), transparent 70%),
+    radial-gradient(30% 25% at 85% 60%, rgba(255, 228, 170, 0.12), transparent 70%);
+}
+
+@keyframes nebula-drift {
+  from {
+    transform: translate3d(-2%, -1%, 0) scale(1);
+  }
+  to {
+    transform: translate3d(2%, 2%, 0) scale(1.08);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .starfield__nebula {
+    animation: none;
+  }
+}

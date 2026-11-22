@@ -1,0 +1,10 @@
+{
+  "_placeholder": true,
+  "_note": "DEVELOPMENT PLACEHOLDER. Replace this file with the real birthday content before 18.12.2026. It is only served by /api/birthday after the unlock moment. Set _placeholder to false when done.",
+  "eyebrow": "Transmission received",
+  "headline": "Happy 25th Birthday, Princess Prism!",
+  "blocks": [
+    { "type": "text", "text": "[ The birthday message will be written here. ]" }
+  ],
+  "signature": ""
+}

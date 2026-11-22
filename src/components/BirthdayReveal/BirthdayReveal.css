@@ -1,0 +1,138 @@
+.br {
+  padding-top: 40px;
+  padding-bottom: calc(var(--safe-bottom) + 120px);
+}
+
+.br-banner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.br-line {
+  margin: 0 0 6px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.4em;
+  padding-left: 0.4em;
+  color: var(--c-gold);
+  text-shadow: 0 0 14px rgba(242, 198, 109, 0.7);
+}
+
+.br-line--1 {
+  font-size: clamp(26px, 8vw, 44px);
+  letter-spacing: 0.18em;
+  padding-left: 0.18em;
+  color: #fff4d6;
+}
+
+.br-line--2 {
+  color: var(--c-ice);
+  text-shadow: 0 0 14px rgba(57, 139, 255, 0.7);
+}
+
+.br-crown {
+  margin: 26px 0 10px;
+}
+
+.br-headline {
+  margin: 0;
+  max-width: 16ch;
+  font-size: clamp(36px, 10vw, 66px);
+  font-weight: 600;
+  line-height: 1.08;
+  filter: drop-shadow(0 0 24px rgba(242, 198, 109, 0.45));
+}
+
+.br-container {
+  margin: 40px auto 0;
+  max-width: 640px;
+  min-height: 140px;
+  padding: 28px 24px;
+  border-color: rgba(242, 198, 109, 0.3);
+  background: linear-gradient(160deg, rgba(90, 70, 30, 0.3), rgba(20, 18, 30, 0.55));
+  text-align: left;
+}
+
+.br-status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin: 30px 0;
+  text-align: center;
+  font-size: 13px;
+  color: var(--text-dim);
+}
+
+.br-spinner {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid rgba(242, 198, 109, 0.3);
+  border-top-color: var(--c-gold);
+  animation: spin 0.9s linear infinite;
+}
+
+.br-dev {
+  margin: 0 0 20px;
+  padding: 10px 12px;
+  border: 1px dashed rgba(242, 198, 109, 0.5);
+  border-radius: 10px;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--c-gold);
+}
+
+.br-eyebrow {
+  color: var(--c-gold);
+}
+
+.br-content-title {
+  margin: 8px 0 16px;
+  font-size: clamp(28px, 7.5vw, 40px);
+  color: #fff4d6;
+}
+
+.br-heading {
+  margin: 24px 0 8px;
+  font-size: 26px;
+  color: #fff4d6;
+}
+
+.br-text {
+  margin: 0 0 14px;
+  font-size: 16px;
+  line-height: 1.75;
+  white-space: pre-line;
+}
+
+.br-figure {
+  margin: 20px 0;
+}
+
+.br-figure img,
+.br-figure video {
+  width: 100%;
+  border-radius: 12px;
+}
+
+.br-figure audio {
+  width: 100%;
+}
+
+.br-figure figcaption {
+  margin-top: 8px;
+  text-align: center;
+  font-style: italic;
+  font-size: 17px;
+  color: var(--c-silver);
+}
+
+.br-signature {
+  margin: 24px 0 0;
+  text-align: right;
+  font-size: 22px;
+  font-style: italic;
+  color: var(--c-gold);
+}

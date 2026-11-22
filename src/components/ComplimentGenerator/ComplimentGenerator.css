@@ -1,0 +1,89 @@
+.compliments__card {
+  margin: 40px auto 0;
+  max-width: 560px;
+  padding: 26px 22px 28px;
+  overflow: hidden;
+}
+
+.compliments__card::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(120deg, rgba(102, 229, 245, 0.5), transparent 30%, transparent 70%, rgba(169, 155, 239, 0.5));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+.compliments__index {
+  position: absolute;
+  top: 14px;
+  right: 18px;
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  color: var(--text-faint);
+}
+
+.compliments__stage {
+  min-height: 150px;
+  display: grid;
+  place-items: center;
+  padding: 14px 0;
+}
+
+.compliments__idle {
+  margin: 0;
+  font-style: italic;
+  color: var(--text-faint);
+}
+
+.compliments__quote {
+  margin: 0;
+  font-size: clamp(24px, 6.6vw, 32px);
+  line-height: 1.25;
+  color: #fff;
+}
+
+.compliments__action {
+  position: relative;
+  display: inline-block;
+}
+
+.compliments__burst {
+  position: absolute;
+  inset: 50% auto auto 50%;
+  pointer-events: none;
+}
+
+.compliments__burst i {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--c-cyan);
+  box-shadow: 0 0 8px var(--c-cyan);
+  opacity: 0;
+}
+
+.compliments__burst i:nth-child(even) {
+  background: var(--c-lavender);
+  box-shadow: 0 0 8px var(--c-lavender);
+}
+
+.compliments__burst.is-on i {
+  animation: burst 0.9s var(--ease-out) forwards;
+}
+
+@keyframes burst {
+  0% {
+    opacity: 1;
+    transform: rotate(var(--a)) translateX(0);
+  }
+  100% {
+    opacity: 0;
+    transform: rotate(var(--a)) translateX(110px);
+  }
+}
