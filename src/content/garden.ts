@@ -105,19 +105,16 @@ export const garden = {
     sendLabel: 'Send my wish to the stars',
     skipLabel: 'Keep it to myself',
     anotherPrompt: 'Now… another wish?',
-    disclosureLive:
-      'Sending delivers your wish privately, by email, to the person who made this garden. It is never shown on this website or stored here.',
-    /** No backend connected (e.g. GitHub Pages without VITE_API_BASE_URL): nothing is sent. */
-    disclosureNotConnected:
-      'Wish delivery is not connected yet, so a wish made now stays between you and the stars: it is not sent, emailed or saved anywhere.',
-    /** A backend answered, but email delivery is not switched on there yet. */
-    disclosureDryRun:
-      'Wish delivery is not switched on yet: a wish made now is checked and then discarded. It is not emailed or saved anywhere.',
-    acceptedLive: 'Your wish has been sent privately to the stars.',
-    resultNotConnected:
-      'Your wish has been made. Wish delivery is not connected yet, so it was not sent anywhere or saved: it stays between you and the stars.',
-    acceptedDryRun:
-      'Your wish has been made. Delivery is not switched on yet, so it was not emailed or saved: it stays between you and the stars.',
+    /** Shown under the wish box when the Royal Wish Vault is reachable. */
+    disclosureVault:
+      'Sending delivers your wish privately to the person who made this garden. It is never shown on this website, and it cannot be reopened here once sent.',
+    /** The backend answered, but its storage is not set up yet: nothing can be sent. */
+    disclosureUnavailable: 'Wish delivery is not ready yet, so a wish cannot be sent right now.',
+    /** No backend connected (e.g. GitHub Pages without VITE_API_BASE_URL): nothing can be sent. */
+    disclosureNotConnected: 'Wish delivery is not connected yet, so a wish cannot be sent from this version of the site.',
+    /** Shown only after the vault has confirmed the wish was stored. */
+    acceptedVault:
+      'Your wish has found its way to the stars. Some wishes are meant to travel quietly. Thank you for sharing yours.',
     keptPrivate: 'Kept between you and the stars. That works too.',
     /** Every error code the client or server can return has a message. */
     errors: {
@@ -132,8 +129,10 @@ export const garden = {
       'bad-json': 'The stars could not read that request. Your wish was not sent.',
       'method-not-allowed': 'The stars could not read that request. Your wish was not sent.',
       'too-large': 'That wish was too large to carry. Your wish was not sent.',
-      'delivery-failed': 'The stars could not deliver it just now. Your wish was not sent; please try again later.',
       network: 'The stars could not be reached just now. Your wish was not sent.',
+      'storage-unavailable': 'Wish delivery is not ready yet. Your wish was not sent; please try again later.',
+      'storage-failed': 'The stars could not keep it just now. Your wish was not sent; please try again.',
+      'not-connected': 'Wish delivery is not connected yet, so your wish was not sent.',
       generic: 'Something went wrong. Your wish was not sent.',
     } as Record<string, string>,
     /** Exact text required by the brief. Do not rewrite. */

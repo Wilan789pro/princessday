@@ -1,8 +1,8 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
 import { EventEmitter } from 'node:events';
-import { allowedOrigins, createWishHandler, MAX_BODY_BYTES, missingEmailSettings, readRawBody } from './wishHandler.js';
-
-const CONFIGURED = { RESEND_API_KEY: 'test-key', WISH_TO_EMAIL: 'to@example.invalid', WISH_FROM_EMAIL: 'from@example.invalid' };
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { createFakeUpstash } from './__tests__/fakeUpstash.js';
+import { allowedOrigins, createWishHandler, MAX_BODY_BYTES, readRawBody } from './wishHandler.js';
+import { createMemoryStore, createRedisStore } from './wishStore.js';
 
 const post = (body, extra = {}) => ({
   method: 'POST',
@@ -10,217 +10,167 @@ const post = (body, extra = {}) => ({
   rawBody: typeof body === 'string' ? body : JSON.stringify(body),
   ip: extra.ip ?? '203.0.113.1',
 });
-
 const ok = (wish) => ({ wish, composeMs: 5000 });
 const json = (r) => JSON.parse(r.body);
+const quiet = () => ['log', 'info', 'warn', 'error', 'debug'].map((m) => vi.spyOn(console, m).mockImplementation(() => {}));
 
 afterEach(() => vi.restoreAllMocks());
 
-describe('dry-run mode (no email configured)', () => {
-  it('reports dry-run, never calls the sender and never echoes the wish', async () => {
-    const send = vi.fn();
-    const handle = createWishHandler({ env: {}, send });
-    const wish = 'To see the aurora borealis';
-    const r = await handle(post(ok(wish)));
+describe('submitting a wish to the Royal Wish Vault', () => {
+  it('stores the wish exactly as written and only then reports success', async () => {
+    const store = createMemoryStore();
+    const wish = '  Spaces, émojis 💎 and\nnew lines stay intact  ';
+    const r = await createWishHandler({ env: {}, store })(post(ok(wish)));
     expect(r.status).toBe(200);
-    expect(json(r)).toEqual({ status: 'accepted', delivery: 'dry-run' });
-    expect(r.body).not.toContain(wish);
-    expect(send).not.toHaveBeenCalled();
+    expect(json(r)).toEqual({ status: 'accepted', delivery: 'vault' });
+    expect(r.body).not.toContain('Spaces');
+    expect((await store.listWishes()).map((w) => w.text)).toEqual([wish]);
   });
 
-  it('GET reports the delivery mode without secrets', async () => {
-    expect(json(await createWishHandler({ env: {} })({ method: 'GET', headers: {}, rawBody: '', ip: 'x' }))).toEqual({
-      delivery: 'dry-run',
-    });
-    const r = await createWishHandler({ env: CONFIGURED })({ method: 'GET', headers: {}, rawBody: '', ip: 'x' });
-    expect(json(r)).toEqual({ delivery: 'email' });
-    expect(r.body).not.toContain('test-key');
-    expect(r.body).not.toContain('example.invalid');
+  it('persists to the database (Redis) so the vault can read it later', async () => {
+    const fake = createFakeUpstash();
+    const store = createRedisStore({ url: 'https://x.upstash.io', token: 'test-token', fetchImpl: fake.fetchImpl });
+    await createWishHandler({ env: {}, store })(post(ok('stored for real')));
+    const fresh = createRedisStore({ url: 'https://x.upstash.io', token: 'test-token', fetchImpl: fake.fetchImpl });
+    expect((await fresh.listWishes()).map((w) => w.text)).toEqual(['stored for real']);
   });
 
-  it('does not log the wish anywhere', async () => {
-    const spies = ['log', 'info', 'warn', 'error', 'debug'].map((m) => vi.spyOn(console, m).mockImplementation(() => {}));
-    const wish = 'a very private wish 12345';
-    await createWishHandler({ env: {} })(post(ok(wish)));
-    await createWishHandler({ env: CONFIGURED, send: () => Promise.reject(new Error(wish)) })(post(ok(wish)));
-    for (const spy of spies) {
-      for (const call of spy.mock.calls) expect(JSON.stringify(call)).not.toContain(wish);
-    }
+  it('refuses (503) instead of pretending when no storage is configured', async () => {
+    quiet();
+    const r = await createWishHandler({ env: {}, store: null })(post(ok('a wish')));
+    expect(r.status).toBe(503);
+    expect(json(r)).toEqual({ status: 'error', error: 'storage-unavailable' });
+  });
+
+  it('reports a storage failure as an error – never as success – and logs nothing of the wish', async () => {
+    const spies = quiet();
+    const store = createMemoryStore();
+    store.addWish = () => Promise.reject(new Error('a very private wish 12345'));
+    const r = await createWishHandler({ env: {}, store })(post(ok('a very private wish 12345')));
+    expect(r.status).toBe(503);
+    expect(json(r)).toEqual({ status: 'error', error: 'storage-failed' });
+    for (const spy of spies) for (const call of spy.mock.calls) expect(JSON.stringify(call)).not.toContain('private wish');
   });
 });
 
-describe('configured delivery (sender is a test double – no network)', () => {
-  it('passes the wish to the sender exactly as written', async () => {
-    const send = vi.fn().mockResolvedValue(undefined);
-    const wish = '  Spaces, émojis 💎 and\nnew lines stay intact  ';
-    const r = await createWishHandler({ env: CONFIGURED, send })(post(ok(wish)));
-    expect(json(r)).toEqual({ status: 'accepted', delivery: 'email' });
-    expect(send).toHaveBeenCalledWith({ apiKey: 'test-key', to: CONFIGURED.WISH_TO_EMAIL, from: CONFIGURED.WISH_FROM_EMAIL, text: wish });
+describe('no public wish retrieval', () => {
+  it('GET reports only whether the vault is available – never any wishes', async () => {
+    const store = createMemoryStore();
+    await store.addWish({ text: 'secret wish text', createdAt: 1 });
+    const r = await createWishHandler({ env: {}, store })({ method: 'GET', headers: {}, rawBody: '', ip: 'x' });
+    expect(json(r)).toEqual({ delivery: 'vault' });
+    expect(r.body).not.toContain('secret');
+    quiet();
+    expect(json(await createWishHandler({ env: {}, store: null })({ method: 'GET', headers: {}, rawBody: '', ip: 'x' }))).toEqual({ delivery: 'unavailable' });
   });
-
-  it('reports a delivery failure honestly', async () => {
-    vi.spyOn(console, 'error').mockImplementation(() => {});
-    const r = await createWishHandler({ env: CONFIGURED, send: () => Promise.reject(new Error('x')) })(post(ok('a wish')));
-    expect(r.status).toBe(502);
-    expect(json(r).status).toBe('error');
+  it('other methods are refused', async () => {
+    const h = createWishHandler({ env: {}, store: createMemoryStore() });
+    for (const method of ['DELETE', 'PUT', 'PATCH']) expect((await h({ method, headers: {}, rawBody: '', ip: 'x' })).status).toBe(405);
   });
 });
 
 describe('wealth wish backstop', () => {
-  it('is rejected as a joke and never delivered, even when email is configured', async () => {
-    const send = vi.fn();
-    const r = await createWishHandler({ env: CONFIGURED, send })(post(ok('I want to be a billionaire')));
+  it('is answered with the joke and never stored', async () => {
+    const store = createMemoryStore();
+    const r = await createWishHandler({ env: {}, store })(post(ok('I want to be a billionaire')));
     expect(json(r)).toEqual({ status: 'rejected', reason: 'wealth' });
-    expect(send).not.toHaveBeenCalled();
+    expect(await store.listWishes()).toEqual([]);
   });
 });
 
-describe('invalid input', () => {
-  const handle = () => createWishHandler({ env: CONFIGURED, send: vi.fn() });
+describe('invalid input is refused and nothing is stored', () => {
+  const run = async (req) => {
+    const store = createMemoryStore();
+    const r = await createWishHandler({ env: {}, store })(req);
+    expect(await store.listWishes()).toEqual([]);
+    return r;
+  };
   it.each([
     ['empty', ok('   '), 'empty'],
-    ['too long', ok('x'.repeat(501)), 'too-long'],
+    ['501 characters', ok('x'.repeat(501)), 'too-long'],
     ['not text', ok(123), 'not-text'],
-    ['control chars', ok('hi\u0000'), 'invalid-characters'],
-  ])('rejects %s', async (_n, body, error) => {
-    const r = await handle()(post(body));
+    ['control characters', ok('hi\u0000'), 'invalid-characters'],
+  ])('%s', async (_n, body, error) => {
+    const r = await run(post(body));
     expect(r.status).toBe(400);
     expect(json(r).error).toBe(error);
   });
-  it('rejects malformed JSON', async () => {
-    expect((await handle()(post('{nope'))).status).toBe(400);
+  it('accepts exactly 500 characters', async () => {
+    const store = createMemoryStore();
+    expect((await createWishHandler({ env: {}, store })(post(ok('x'.repeat(500))))).status).toBe(200);
   });
-  it('rejects the wrong content type and method', async () => {
-    expect((await handle()({ ...post(ok('a')), headers: { 'content-type': 'text/plain' } })).status).toBe(415);
-    expect((await handle()({ method: 'DELETE', headers: {}, rawBody: '', ip: 'x' })).status).toBe(405);
-  });
-  it('rejects oversized bodies', async () => {
-    const r = await handle()(post(JSON.stringify({ wish: 'a', composeMs: 5000, pad: 'x'.repeat(MAX_BODY_BYTES) })));
-    expect(r.status).toBe(413);
-  });
-  it('rejects the honeypot and instant submissions', async () => {
-    expect((await handle()(post({ ...ok('a wish'), website: 'http://spam' }))).status).toBe(400);
-    expect((await handle()(post({ wish: 'a wish', composeMs: 10 }))).status).toBe(400);
-  });
-  it('enforces an allowed origin when configured', async () => {
-    const h = createWishHandler({ env: { WISH_ALLOWED_ORIGINS: 'https://prism.example' }, send: vi.fn() });
-    expect((await h(post(ok('a wish'), { headers: { origin: 'https://evil.example' } }))).status).toBe(403);
-    expect((await h(post(ok('a wish'), { headers: { origin: 'https://prism.example' } }))).status).toBe(200);
+  it('malformed JSON, wrong content type, oversized bodies, honeypot and instant submissions', async () => {
+    expect((await run(post('{nope'))).status).toBe(400);
+    expect((await run({ ...post(ok('a')), headers: { 'content-type': 'text/plain' } })).status).toBe(415);
+    expect((await run({ ...post(ok('a')), rawBody: null })).status).toBe(413);
+    expect((await run(post(ok('a'), { headers: { 'content-length': String(MAX_BODY_BYTES + 1) } }))).status).toBe(413);
+    expect((await run(post({ ...ok('a wish'), website: 'http://spam' }))).status).toBe(400);
+    expect((await run(post({ wish: 'a wish', composeMs: 10 }))).status).toBe(400);
   });
 });
 
-describe('best-effort rate limiting', () => {
-  it('limits one client to 5 wishes per hour', async () => {
+describe('rate limiting (persistent counters, hashed IPs)', () => {
+  it('limits one visitor to 5 wishes per hour; others are unaffected; resets after the hour', async () => {
     let t = Date.parse('2026-11-23T10:00:00Z');
-    const h = createWishHandler({ env: {}, now: () => t });
+    const store = createMemoryStore({ now: () => t });
+    const h = createWishHandler({ env: {}, store, now: () => t });
     for (let i = 0; i < 5; i++) expect((await h(post(ok(`wish ${i}`)))).status).toBe(200);
     expect((await h(post(ok('one more')))).status).toBe(429);
-    expect((await h(post(ok('other client'), { ip: '198.51.100.7' }))).status).toBe(200);
+    expect((await h(post(ok('other visitor'), { ip: '198.51.100.7' }))).status).toBe(200);
     t += 61 * 60 * 1000;
     expect((await h(post(ok('later')))).status).toBe(200);
+  });
+  it('caps the total at 40 wishes per day', async () => {
+    const store = createMemoryStore();
+    const h = createWishHandler({ env: {}, store });
+    for (let i = 0; i < 40; i++) expect((await h(post(ok(`w${i}`), { ip: `10.0.0.${i}` }))).status).toBe(200);
+    expect((await h(post(ok('w41'), { ip: '10.0.1.1' }))).status).toBe(429);
+  });
+  it('never stores raw IP addresses', async () => {
+    const fake = createFakeUpstash();
+    const store = createRedisStore({ url: 'https://x.upstash.io', token: 'test-token', fetchImpl: fake.fetchImpl });
+    await createWishHandler({ env: {}, store })(post(ok('a wish'), { ip: '203.0.113.99' }));
+    expect(JSON.stringify(fake.log)).not.toContain('203.0.113.99');
   });
 });
 
 describe('cross-origin (GitHub Pages → separately hosted API)', () => {
   const PAGES = 'https://wilan789pro.github.io';
-  const env = { ...CONFIGURED, WISH_ALLOWED_ORIGINS: `${PAGES}, https://other.example/` };
-  const fromPages = { headers: { origin: PAGES } };
-
+  const env = { WISH_ALLOWED_ORIGINS: `${PAGES}, https://other.example/` };
   it('answers an allowed preflight with 204 and CORS headers, processing nothing', async () => {
-    const send = vi.fn();
-    const r = await createWishHandler({ env, send })({ method: 'OPTIONS', headers: { origin: PAGES }, rawBody: '', ip: 'x' });
+    const store = createMemoryStore();
+    const r = await createWishHandler({ env, store })({ method: 'OPTIONS', headers: { origin: PAGES }, rawBody: '', ip: 'x' });
     expect(r.status).toBe(204);
-    expect(r.body).toBe('');
     expect(r.headers['Access-Control-Allow-Origin']).toBe(PAGES);
-    expect(r.headers['Access-Control-Allow-Methods']).toContain('POST');
     expect(r.headers['Access-Control-Allow-Headers']).toContain('Content-Type');
-    expect(r.headers.Vary).toBe('Origin');
-    expect(send).not.toHaveBeenCalled();
+    expect(await store.listWishes()).toEqual([]);
   });
-
-  it('delivers an allowed POST and returns the CORS header with it', async () => {
-    const send = vi.fn().mockResolvedValue(undefined);
-    const r = await createWishHandler({ env, send })(post(ok('a wish from the garden'), fromPages));
-    expect(r.status).toBe(200);
-    expect(r.headers['Access-Control-Allow-Origin']).toBe(PAGES);
-    expect(send).toHaveBeenCalledTimes(1);
+  it('stores an allowed POST and keeps the CORS header on errors too', async () => {
+    const store = createMemoryStore();
+    const h = createWishHandler({ env, store });
+    const good = await h(post(ok('from the garden'), { headers: { origin: PAGES } }));
+    expect(good.headers['Access-Control-Allow-Origin']).toBe(PAGES);
+    const bad = await h(post(ok('   '), { headers: { origin: PAGES } }));
+    expect(bad.headers['Access-Control-Allow-Origin']).toBe(PAGES);
+    expect(await store.listWishes()).toHaveLength(1);
   });
-
-  it('accepts listed origins written with a trailing slash', async () => {
-    const r = await createWishHandler({ env, send: vi.fn() })({ method: 'GET', headers: { origin: 'https://other.example' }, rawBody: '', ip: 'x' });
-    expect(r.headers['Access-Control-Allow-Origin']).toBe('https://other.example');
-  });
-
-  it('refuses any other origin – preflight and POST – without CORS headers or delivery', async () => {
-    const send = vi.fn();
-    const h = createWishHandler({ env, send });
+  it('refuses any other origin without CORS headers or storage', async () => {
+    const store = createMemoryStore();
+    const h = createWishHandler({ env, store });
     for (const method of ['OPTIONS', 'POST', 'GET']) {
       const r = await h({ ...post(ok('a wish')), method, headers: { 'content-type': 'application/json', origin: 'https://evil.example' } });
-      expect(r.status, method).toBe(403);
+      expect(r.status).toBe(403);
       expect(r.headers['Access-Control-Allow-Origin']).toBeUndefined();
     }
-    expect(send).not.toHaveBeenCalled();
+    expect(await store.listWishes()).toEqual([]);
   });
-
-  it('keeps CORS headers on error answers so the page can show the right message', async () => {
-    const h = createWishHandler({ env, send: () => Promise.reject(new Error('down')) });
-    vi.spyOn(console, 'error').mockImplementation(() => {});
-    const bad = await h(post(ok('   '), fromPages));
-    expect(bad.status).toBe(400);
-    expect(bad.headers['Access-Control-Allow-Origin']).toBe(PAGES);
-    const failed = await h(post(ok('a wish'), fromPages));
-    expect(failed.status).toBe(502);
-    expect(JSON.parse(failed.body).error).toBe('delivery-failed');
-    expect(failed.headers['Access-Control-Allow-Origin']).toBe(PAGES);
-  });
-
-  it('without an allow-list, gives no CORS headers (same-origin pages only)', async () => {
-    const r = await createWishHandler({ env: {}, send: vi.fn() })(post(ok('a wish'), fromPages));
-    expect(r.headers['Access-Control-Allow-Origin']).toBeUndefined();
-  });
-});
-
-describe('configuration warnings (names only, never values)', () => {
-  it('warns once when only some email settings exist, and stays in dry-run', async () => {
-    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    const send = vi.fn();
-    const env = { RESEND_API_KEY: 'secret-value-123', WISH_TO_EMAIL: 'someone@example.invalid' };
-    const h = createWishHandler({ env, send });
-    expect(missingEmailSettings(env)).toEqual(['WISH_FROM_EMAIL']);
-    expect(warn).toHaveBeenCalledTimes(1);
-    const msg = String(warn.mock.calls[0][0]);
-    expect(msg).toContain('WISH_FROM_EMAIL');
-    expect(msg).not.toContain('secret-value-123');
-    expect(msg).not.toContain('someone@example.invalid');
-    expect(JSON.parse((await h(post(ok('a wish')))).body)).toEqual({ status: 'accepted', delivery: 'dry-run' });
-    expect(send).not.toHaveBeenCalled();
-  });
-
-  it('is silent when nothing or everything is configured (with an allow-list)', () => {
-    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    createWishHandler({ env: {} });
-    createWishHandler({ env: { ...CONFIGURED, WISH_ALLOWED_ORIGINS: 'https://wilan789pro.github.io' } });
-    expect(warn).not.toHaveBeenCalled();
-    expect(missingEmailSettings({})).toEqual([]);
-    expect(missingEmailSettings(CONFIGURED)).toEqual([]);
-  });
-
-  it('points out a missing allow-list when delivery is configured', () => {
-    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    createWishHandler({ env: CONFIGURED });
-    expect(String(warn.mock.calls[0][0])).toContain('WISH_ALLOWED_ORIGINS');
+  it('parses the allow-list tolerantly', () => {
     expect(allowedOrigins({ WISH_ALLOWED_ORIGINS: ' https://a.example/ ,, https://b.example ' })).toEqual(['https://a.example', 'https://b.example']);
   });
 });
 
-describe('oversized requests', () => {
-  it('answers 413 when the body reader reports an overflow or the declared length is too big', async () => {
-    const h = createWishHandler({ env: {}, send: vi.fn() });
-    expect((await h({ ...post(ok('a')), rawBody: null })).status).toBe(413);
-    expect((await h({ ...post(ok('a')), headers: { 'content-type': 'application/json', 'content-length': String(MAX_BODY_BYTES + 1) } })).status).toBe(413);
-  });
-
-  it('readRawBody stops buffering past the limit', async () => {
+describe('readRawBody', () => {
+  it('stops buffering past the limit', async () => {
     const stream = (chunks) => {
       const e = new EventEmitter();
       queueMicrotask(() => {

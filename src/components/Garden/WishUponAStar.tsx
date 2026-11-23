@@ -25,7 +25,6 @@ export function WishUponAStar({ onContinue }: { onContinue: () => void }) {
   const [joke, setJoke] = useState(false);
   const [error, setError] = useState('');
   const [delivery, setDelivery] = useState<WishDelivery>(WISH_ENDPOINT ? 'unknown' : 'not-connected');
-  const [accepted, setAccepted] = useState<WishDelivery>('unknown');
   const [honeypot, setHoneypot] = useState('');
   const composeStart = useRef(0);
   const areaRef = useRef<HTMLTextAreaElement>(null);
@@ -72,11 +71,10 @@ export function WishUponAStar({ onContinue }: { onContinue: () => void }) {
       setMode('writing');
       return showJoke();
     }
-    if (r.kind === 'accepted' || r.kind === 'not-connected') {
-      // The wish text is cleared from memory either way; nothing is stored.
+    if (r.kind === 'accepted') {
+      // Only after the vault confirmed storage: clear the input and celebrate.
       setText('');
       setJoke(false);
-      setAccepted(r.kind === 'accepted' ? r.delivery : 'not-connected');
       setMode('accepted');
       audio.golden();
       return;
@@ -209,7 +207,7 @@ export function WishUponAStar({ onContinue }: { onContinue: () => void }) {
                 </p>
               )}
               <p id="wish-disclosure" className="wish__disclosure">
-                {delivery === 'email' ? w.disclosureLive : delivery === 'dry-run' ? w.disclosureDryRun : w.disclosureNotConnected}
+                {delivery === 'not-connected' ? w.disclosureNotConnected : delivery === 'unavailable' ? w.disclosureUnavailable : w.disclosureVault}
               </p>
               <div className="garden__actions">
                 <button
@@ -243,13 +241,7 @@ export function WishUponAStar({ onContinue }: { onContinue: () => void }) {
                 transition={{ duration: reduced ? 0 : 1.6 }}
               />
               <p className="wish__done-text serif">
-                {mode === 'kept'
-                  ? w.keptPrivate
-                  : accepted === 'email'
-                    ? w.acceptedLive
-                    : accepted === 'dry-run'
-                      ? w.acceptedDryRun
-                      : w.resultNotConnected}
+                {mode === 'kept' ? w.keptPrivate : w.acceptedVault}
               </p>
             </motion.div>
           )}

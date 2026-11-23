@@ -87,16 +87,20 @@ describe('launch gate: no unfinished copy ships', () => {
     expect(princessDay.closing.body.length).toBeGreaterThan(80);
   });
 
-  it('never claims delivery when wishes are not connected', () => {
-    // no backend connected: nothing sent
-    expect(garden.wish.resultNotConnected).toMatch(/not connected/i);
-    expect(garden.wish.resultNotConnected).toMatch(/not sent/i);
+  it('wish messages are honest about where a wish goes and whether it was sent', () => {
+    // the confirmation is the agreed wording, and is shown only after storage succeeded
+    expect(garden.wish.acceptedVault).toBe(
+      'Your wish has found its way to the stars. Some wishes are meant to travel quietly. Thank you for sharing yours.',
+    );
+    // visitors are told plainly where a wish goes
+    expect(garden.wish.disclosureVault).toMatch(/privately/i);
+    expect(garden.wish.disclosureVault).toMatch(/person who made this garden/i);
+    // when nothing can be sent, the copy says so
     expect(garden.wish.disclosureNotConnected).toMatch(/not connected/i);
-    // backend reachable but email off: checked, not emailed, not saved
-    expect(garden.wish.acceptedDryRun).toMatch(/not emailed or saved/i);
-    expect(garden.wish.disclosureDryRun).toMatch(/not emailed or saved/i);
-    // only the live message may speak of sending
-    for (const s of [garden.wish.resultNotConnected, garden.wish.acceptedDryRun]) expect(s).not.toMatch(/has been sent|delivered/i);
+    expect(garden.wish.disclosureUnavailable).toMatch(/not ready/i);
+    expect(garden.wish.errors['not-connected']).toMatch(/not sent/i);
+    // no leftover email wording anywhere in the wish copy
+    expect(JSON.stringify(garden.wish)).not.toMatch(/email|e-mail/i);
     expect(project25.reveal.staticHosting).toMatch(/not connected/i);
   });
 });

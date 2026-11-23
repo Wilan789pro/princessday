@@ -1,18 +1,10 @@
-import { clientIp, createWishHandler, readRawBody } from '../server/wishHandler.js';
-import { send } from './_send.js';
+import { runHandler } from '../server/http.js';
+import { createWishHandler } from '../server/wishHandler.js';
+import { getStore } from '../server/wishStore.js';
 
-// Created once per serverless instance (so the best-effort rate limiter lives
-// for the life of the instance). Reads server-only env vars; dry-run without them.
-const handle = createWishHandler({ env: process.env });
+// Persistent storage only (Upstash Redis) – no in-memory fallback in production.
+const handle = createWishHandler({ env: process.env, store: getStore(process.env) });
 
-export default async function handler(req, res) {
-  send(
-    res,
-    await handle({
-      method: req.method,
-      headers: req.headers,
-      rawBody: req.method === 'POST' ? await readRawBody(req) : '',
-      ip: clientIp(req),
-    }),
-  );
+export default function handler(req, res) {
+  return runHandler(handle, req, res);
 }

@@ -32,9 +32,9 @@ describe('where wishes go (VITE_API_BASE_URL)', () => {
 });
 
 describe('wish client without a backend (GitHub Pages, no API URL)', () => {
-  it('never touches the network and reports "not connected", never delivery', async () => {
+  it('never touches the network and reports an error (not sent) – never success', async () => {
     const fetchImpl = vi.fn();
-    expect(await submitWish('To see the aurora', opts(null, fetchImpl as unknown as typeof fetch))).toEqual({ kind: 'not-connected' });
+    expect(await submitWish('To see the aurora', opts(null, fetchImpl as unknown as typeof fetch))).toEqual({ kind: 'error', error: 'not-connected' });
     expect(await wishDeliveryMode(null, fetchImpl as unknown as typeof fetch)).toBe('not-connected');
     expect(fetchImpl).not.toHaveBeenCalled();
   });
@@ -58,9 +58,9 @@ describe('wish client with a backend', () => {
     expect(fetchImpl).not.toHaveBeenCalled();
   });
 
-  it('posts cross-origin without cookies and passes through the dry-run answer', async () => {
-    const fetchImpl = vi.fn().mockResolvedValue(jsonResponse(200, { status: 'accepted', delivery: 'dry-run' }));
-    expect(await submitWish('a quiet wish', opts(API, fetchImpl))).toEqual({ kind: 'accepted', delivery: 'dry-run' });
+  it('posts cross-origin without cookies; success only when the vault confirms storage', async () => {
+    const fetchImpl = vi.fn().mockResolvedValue(jsonResponse(200, { status: 'accepted', delivery: 'vault' }));
+    expect(await submitWish('a quiet wish', opts(API, fetchImpl))).toEqual({ kind: 'accepted' });
     const [url, init] = fetchImpl.mock.calls[0];
     expect(url).toBe(API);
     expect(init).toMatchObject({ method: 'POST', mode: 'cors', credentials: 'omit' });
@@ -68,8 +68,11 @@ describe('wish client with a backend', () => {
   });
 
   it('maps server errors (including delivery failure) and network failure honestly', async () => {
-    const failed = vi.fn().mockResolvedValue(jsonResponse(502, { status: 'error', error: 'delivery-failed' }));
-    expect(await submitWish('a quiet wish', opts(API, failed))).toEqual({ kind: 'error', error: 'delivery-failed' });
+    const failed = vi.fn().mockResolvedValue(jsonResponse(503, { status: 'error', error: 'storage-failed' }));
+    expect(await submitWish('a quiet wish', opts(API, failed))).toEqual({ kind: 'error', error: 'storage-failed' });
+    // an unexpected "accepted" without the vault's confirmation is not trusted
+    const odd = vi.fn().mockResolvedValue(jsonResponse(200, { status: 'accepted', delivery: 'dry-run' }));
+    expect((await submitWish('a quiet wish', opts(API, odd))).kind).toBe('error');
     const notFound = vi.fn().mockResolvedValue({ ok: false, status: 404, json: async () => Promise.reject(new Error('html')) });
     expect(await submitWish('a quiet wish', opts(API, notFound as unknown as typeof fetch))).toEqual({ kind: 'error', error: 'generic' });
     const offline = vi.fn().mockRejectedValue(new TypeError('offline'));
@@ -78,7 +81,7 @@ describe('wish client with a backend', () => {
 });
 
 describe('every error code has a user-facing message that admits the wish was not sent', () => {
-  const server = readFileSync(new URL('../../server/wishHandler.js', import.meta.url), 'utf8');
+  const server = ['wishHandler.js', 'http.js'].map((f) => readFileSync(new URL(`../../server/${f}`, import.meta.url), 'utf8')).join('\n');
   const rules = readFileSync(new URL('../../shared/wishRules.js', import.meta.url), 'utf8');
   const codes = new Set<string>([
     ...[...server.matchAll(/error: '([a-z-]+)'/g)].map((m) => m[1]),
@@ -94,7 +97,7 @@ describe('every error code has a user-facing message that admits the wish was no
   });
 
   it('server failures say so explicitly', () => {
-    for (const code of ['delivery-failed', 'rate-limited', 'origin', 'too-large', 'network', 'generic']) {
+    for (const code of ['storage-failed', 'storage-unavailable', 'not-connected', 'rate-limited', 'origin', 'too-large', 'network', 'generic']) {
       expect(garden.wish.errors[code]).toMatch(/not sent/i);
     }
   });
