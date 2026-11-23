@@ -24,12 +24,21 @@ export function normaliseApiBase(raw: string | undefined | null): string {
 export const API_BASE_URL = normaliseApiBase(import.meta.env.VITE_API_BASE_URL);
 
 /**
- * Where wishes go:
- * - a configured backend (VITE_API_BASE_URL) → `${base}/api/wish`
- * - otherwise a same-origin server (dev, preview, Vercel) → `/api/wish`
- * - otherwise (static hosting, no backend) → null: not connected, nothing is sent
+ * Where an API path is served:
+ * - a configured backend (VITE_API_BASE_URL) → `${base}${path}`
+ * - otherwise a same-origin server (dev, preview, Vercel) → `${path}`
+ * - otherwise (static hosting, no backend) → null: not connected
  */
-export function wishEndpoint(o: { apiBase: string; staticHosting: boolean }): string | null {
-  if (o.apiBase) return `${o.apiBase}/api/wish`;
-  return o.staticHosting ? null : '/api/wish';
+export function apiEndpoint(path: string, o: { apiBase: string; staticHosting: boolean }): string | null {
+  if (o.apiBase) return `${o.apiBase}${path}`;
+  return o.staticHosting ? null : path;
 }
+
+/** Where wishes go (null = not connected, nothing is sent). */
+export function wishEndpoint(o: { apiBase: string; staticHosting: boolean }): string | null {
+  return apiEndpoint('/api/wish', o);
+}
+
+const here = { apiBase: API_BASE_URL, staticHosting: STATIC_HOSTING };
+export const VAULT_ENDPOINT = apiEndpoint('/api/vault', here);
+export const EXPERIENCE_ENDPOINT = apiEndpoint('/api/experience', here);

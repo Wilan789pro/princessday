@@ -4,6 +4,11 @@
 
 .intro__crystal {
   position: relative;
+  /* quick taps (the hidden vault gesture) must never zoom or select on phones */
+  touch-action: manipulation;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
   margin-bottom: 18px;
   display: grid;
   place-items: center;
