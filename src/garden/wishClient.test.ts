@@ -1,9 +1,10 @@
+import { readFileSync } from 'node:fs';
 import { describe, expect, it, vi } from 'vitest';
-import { isStaticHosting } from '../utils/hosting';
+import { garden } from '../content/garden';
+import { isStaticHosting, normaliseApiBase, wishEndpoint } from '../utils/hosting';
 import { submitWish, wishDeliveryMode } from './wishClient';
 
-const opts = (staticHosting: boolean, fetchImpl: typeof fetch) => ({ staticHosting, composeMs: 5000, honeypot: '', fetchImpl });
-
+const opts = (endpoint: string | null, fetchImpl: typeof fetch) => ({ endpoint, composeMs: 5000, honeypot: '', fetchImpl });
 const jsonResponse = (status: number, body: unknown) =>
   ({ ok: status >= 200 && status < 300, status, json: async () => body }) as unknown as Response;
 
@@ -16,44 +17,85 @@ describe('static hosting detection', () => {
   });
 });
 
-describe('wish client on static hosting (GitHub Pages)', () => {
-  it('never touches the network and reports dry-run, not delivery', async () => {
+describe('where wishes go (VITE_API_BASE_URL)', () => {
+  it('uses a configured backend, else the same-origin server, else nothing', () => {
+    expect(wishEndpoint({ apiBase: 'https://wishes.example.app', staticHosting: true })).toBe('https://wishes.example.app/api/wish');
+    expect(wishEndpoint({ apiBase: '', staticHosting: false })).toBe('/api/wish');
+    expect(wishEndpoint({ apiBase: '', staticHosting: true })).toBeNull();
+  });
+  it('only accepts http(s) addresses and trims trailing slashes', () => {
+    expect(normaliseApiBase(' https://wishes.example.app/// ')).toBe('https://wishes.example.app');
+    expect(normaliseApiBase('javascript:alert(1)')).toBe('');
+    expect(normaliseApiBase('wishes.example.app')).toBe('');
+    expect(normaliseApiBase(undefined)).toBe('');
+  });
+});
+
+describe('wish client without a backend (GitHub Pages, no API URL)', () => {
+  it('never touches the network and reports "not connected", never delivery', async () => {
     const fetchImpl = vi.fn();
-    expect(await submitWish('To see the aurora', opts(true, fetchImpl as unknown as typeof fetch))).toEqual({
-      kind: 'accepted',
-      delivery: 'dry-run',
-    });
-    expect(await wishDeliveryMode(true, fetchImpl as unknown as typeof fetch)).toBe('dry-run');
+    expect(await submitWish('To see the aurora', opts(null, fetchImpl as unknown as typeof fetch))).toEqual({ kind: 'not-connected' });
+    expect(await wishDeliveryMode(null, fetchImpl as unknown as typeof fetch)).toBe('not-connected');
     expect(fetchImpl).not.toHaveBeenCalled();
   });
 
   it('still catches the wealth joke and invalid input locally', async () => {
     const fetchImpl = vi.fn();
     const f = fetchImpl as unknown as typeof fetch;
-    expect(await submitWish('je veux être millionnaire', opts(true, f))).toEqual({ kind: 'wealth' });
-    expect(await submitWish('   ', opts(true, f))).toEqual({ kind: 'error', error: 'empty' });
-    expect(await submitWish('x'.repeat(501), opts(true, f))).toEqual({ kind: 'error', error: 'too-long' });
+    expect(await submitWish('je veux être millionnaire', opts(null, f))).toEqual({ kind: 'wealth' });
+    expect(await submitWish('   ', opts(null, f))).toEqual({ kind: 'error', error: 'empty' });
+    expect(await submitWish('x'.repeat(501), opts(null, f))).toEqual({ kind: 'error', error: 'too-long' });
     expect(fetchImpl).not.toHaveBeenCalled();
   });
 });
 
-describe('wish client with a server', () => {
+describe('wish client with a backend', () => {
+  const API = 'https://wishes.example.app/api/wish';
+
   it('never sends a wealth wish', async () => {
     const fetchImpl = vi.fn();
-    expect(await submitWish('I want lots of money', opts(false, fetchImpl as unknown as typeof fetch))).toEqual({ kind: 'wealth' });
+    expect(await submitWish('I want lots of money', opts(API, fetchImpl as unknown as typeof fetch))).toEqual({ kind: 'wealth' });
     expect(fetchImpl).not.toHaveBeenCalled();
   });
 
-  it('passes through the server’s dry-run answer', async () => {
+  it('posts cross-origin without cookies and passes through the dry-run answer', async () => {
     const fetchImpl = vi.fn().mockResolvedValue(jsonResponse(200, { status: 'accepted', delivery: 'dry-run' }));
-    expect(await submitWish('a quiet wish', opts(false, fetchImpl))).toEqual({ kind: 'accepted', delivery: 'dry-run' });
-    expect(fetchImpl).toHaveBeenCalledTimes(1);
+    expect(await submitWish('a quiet wish', opts(API, fetchImpl))).toEqual({ kind: 'accepted', delivery: 'dry-run' });
+    const [url, init] = fetchImpl.mock.calls[0];
+    expect(url).toBe(API);
+    expect(init).toMatchObject({ method: 'POST', mode: 'cors', credentials: 'omit' });
+    expect(JSON.parse(init.body)).toMatchObject({ wish: 'a quiet wish' });
   });
 
-  it('reports a missing backend as an error instead of a fake success', async () => {
+  it('maps server errors (including delivery failure) and network failure honestly', async () => {
+    const failed = vi.fn().mockResolvedValue(jsonResponse(502, { status: 'error', error: 'delivery-failed' }));
+    expect(await submitWish('a quiet wish', opts(API, failed))).toEqual({ kind: 'error', error: 'delivery-failed' });
     const notFound = vi.fn().mockResolvedValue({ ok: false, status: 404, json: async () => Promise.reject(new Error('html')) });
-    expect(await submitWish('a quiet wish', opts(false, notFound as unknown as typeof fetch))).toEqual({ kind: 'error', error: 'generic' });
+    expect(await submitWish('a quiet wish', opts(API, notFound as unknown as typeof fetch))).toEqual({ kind: 'error', error: 'generic' });
     const offline = vi.fn().mockRejectedValue(new TypeError('offline'));
-    expect(await submitWish('a quiet wish', opts(false, offline))).toEqual({ kind: 'error', error: 'network' });
+    expect(await submitWish('a quiet wish', opts(API, offline))).toEqual({ kind: 'error', error: 'network' });
+  });
+});
+
+describe('every error code has a user-facing message that admits the wish was not sent', () => {
+  const server = readFileSync(new URL('../../server/wishHandler.js', import.meta.url), 'utf8');
+  const rules = readFileSync(new URL('../../shared/wishRules.js', import.meta.url), 'utf8');
+  const codes = new Set<string>([
+    ...[...server.matchAll(/error: '([a-z-]+)'/g)].map((m) => m[1]),
+    ...[...rules.matchAll(/error: '([a-z-]+)'/g)].map((m) => m[1]),
+    ...[...rules.matchAll(/'(not-text|empty|too-long|invalid-characters)'/g)].map((m) => m[1]),
+    'network',
+    'generic',
+  ]);
+
+  it('covers all of them', () => {
+    expect(codes.size).toBeGreaterThan(10);
+    for (const code of codes) expect(garden.wish.errors[code], code).toBeTruthy();
+  });
+
+  it('server failures say so explicitly', () => {
+    for (const code of ['delivery-failed', 'rate-limited', 'origin', 'too-large', 'network', 'generic']) {
+      expect(garden.wish.errors[code]).toMatch(/not sent/i);
+    }
   });
 });

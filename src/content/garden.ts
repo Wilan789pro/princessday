@@ -107,16 +107,32 @@ export const garden = {
     anotherPrompt: 'Now… another wish?',
     disclosureLive:
       'Sending delivers your wish privately, by email, to the person who made this garden. It is never shown on this website or stored here.',
-    disclosureDryRun:
+    /** No backend connected (e.g. GitHub Pages without VITE_API_BASE_URL): nothing is sent. */
+    disclosureNotConnected:
       'Wish delivery is not connected yet, so a wish made now stays between you and the stars: it is not sent, emailed or saved anywhere.',
+    /** A backend answered, but email delivery is not switched on there yet. */
+    disclosureDryRun:
+      'Wish delivery is not switched on yet: a wish made now is checked and then discarded. It is not emailed or saved anywhere.',
     acceptedLive: 'Your wish has been sent privately to the stars.',
-    acceptedDryRun: 'Your wish has been made. Wish delivery is not connected yet, so it stays between you and the stars: it was not sent anywhere or saved.',
+    resultNotConnected:
+      'Your wish has been made. Wish delivery is not connected yet, so it was not sent anywhere or saved: it stays between you and the stars.',
+    acceptedDryRun:
+      'Your wish has been made. Delivery is not switched on yet, so it was not emailed or saved: it stays between you and the stars.',
     keptPrivate: 'Kept between you and the stars. That works too.',
+    /** Every error code the client or server can return has a message. */
     errors: {
       empty: 'Even a tiny wish needs at least one word.',
+      'not-text': 'Even a tiny wish needs at least one word.',
       'too-long': 'That wish is a little long for one star (500 characters at most).',
       'invalid-characters': 'That wish contains characters the stars cannot read.',
-      'rate-limited': 'The stars need a short rest. Try again a little later.',
+      'rate-limited': 'The stars need a short rest. Please try again a little later. Your wish was not sent.',
+      rejected: 'That was very quick. Take a breath and send it again in a moment. Your wish was not sent.',
+      origin: 'Wishes cannot be sent from this page. Your wish was not sent.',
+      'content-type': 'The stars could not read that request. Your wish was not sent.',
+      'bad-json': 'The stars could not read that request. Your wish was not sent.',
+      'method-not-allowed': 'The stars could not read that request. Your wish was not sent.',
+      'too-large': 'That wish was too large to carry. Your wish was not sent.',
+      'delivery-failed': 'The stars could not deliver it just now. Your wish was not sent; please try again later.',
       network: 'The stars could not be reached just now. Your wish was not sent.',
       generic: 'Something went wrong. Your wish was not sent.',
     } as Record<string, string>,

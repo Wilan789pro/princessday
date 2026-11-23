@@ -10,6 +10,12 @@
  * Rate limiting below is in-memory and therefore BEST-EFFORT ONLY: on serverless
  * hosting each instance has its own memory and it resets on cold start. For
  * strong guarantees use the host's firewall rate limits or a shared store.
+ *
+ * CROSS-ORIGIN: the site on GitHub Pages calls this endpoint on another host.
+ * Only origins listed in WISH_ALLOWED_ORIGINS (comma-separated, e.g.
+ * https://wilan789pro.github.io) receive CORS headers; any other Origin is
+ * refused with 403. Without the list, browsers can only call it same-origin.
+ * (CORS limits browsers, not other clients – it is not authentication.)
  */
 import { isWealthWish, validateWish } from '../shared/wishRules.js';
 
@@ -25,7 +31,33 @@ const JSON_HEADERS = {
   'X-Robots-Tag': 'noindex',
 };
 
-const reply = (status, body) => ({ status, headers: JSON_HEADERS, body: JSON.stringify(body) });
+const reply = (status, body, extra = {}) => ({ status, headers: { ...JSON_HEADERS, ...extra }, body: JSON.stringify(body) });
+
+export const EMAIL_SETTINGS = ['RESEND_API_KEY', 'WISH_TO_EMAIL', 'WISH_FROM_EMAIL'];
+
+/** Names (never values) of the email settings that are missing when only some are set. */
+export function missingEmailSettings(env) {
+  const set = EMAIL_SETTINGS.filter((k) => Boolean(env[k]));
+  if (set.length === 0 || set.length === EMAIL_SETTINGS.length) return [];
+  return EMAIL_SETTINGS.filter((k) => !env[k]);
+}
+
+export function allowedOrigins(env) {
+  return (env.WISH_ALLOWED_ORIGINS ?? '')
+    .split(',')
+    .map((o) => o.trim().replace(/\/+$/, ''))
+    .filter(Boolean);
+}
+
+function corsHeaders(origin) {
+  return {
+    'Access-Control-Allow-Origin': origin,
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Max-Age': '600',
+    Vary: 'Origin',
+  };
+}
 
 export function isDeliveryConfigured(env) {
   return Boolean(env.RESEND_API_KEY && env.WISH_TO_EMAIL && env.WISH_FROM_EMAIL);
@@ -47,6 +79,15 @@ export async function sendViaResend({ apiKey, to, from, text }) {
  */
 export function createWishHandler({ env = process.env, now = Date.now, send = sendViaResend } = {}) {
   const perIp = new Map(); // ip -> timestamps
+
+  // Configuration warnings, once at start-up. Names only – never values.
+  const missing = missingEmailSettings(env);
+  if (missing.length) {
+    console.warn(`[wish] email delivery is only partly configured – missing: ${missing.join(', ')}. Running in dry-run (nothing is sent).`);
+  }
+  if (isDeliveryConfigured(env) && allowedOrigins(env).length === 0) {
+    console.warn('[wish] WISH_ALLOWED_ORIGINS is empty: only pages on this same host can send wishes.');
+  }
   let day = { key: '', count: 0 };
 
   const limited = (ip) => {
@@ -62,78 +103,90 @@ export function createWishHandler({ env = process.env, now = Date.now, send = se
   };
 
   /**
-   * @param {{ method: string, headers: Record<string,string|undefined>, rawBody: string, ip: string }} req
+   * @param {{ method: string, headers: Record<string,string|undefined>, rawBody: string | null, ip: string }} req
+   *   rawBody === null means the body exceeded the size limit while being read.
    */
   return async function handleWish({ method, headers, rawBody, ip }) {
     const configured = isDeliveryConfigured(env);
+    const origin = headers.origin;
+    const allowed = allowedOrigins(env);
 
-    if (method === 'GET') {
-      return reply(200, { delivery: configured ? 'email' : 'dry-run' });
-    }
-    if (method !== 'POST') return reply(405, { status: 'error', error: 'method-not-allowed' });
-
-    const allowed = (env.WISH_ALLOWED_ORIGINS ?? '').split(',').map((s) => s.trim()).filter(Boolean);
-    if (allowed.length && headers.origin && !allowed.includes(headers.origin)) {
+    // ---- CORS: an Origin we were not told about is refused outright.
+    if (origin && allowed.length && !allowed.includes(origin)) {
       return reply(403, { status: 'error', error: 'origin' });
     }
-    if (!(headers['content-type'] ?? '').includes('application/json')) {
-      return reply(415, { status: 'error', error: 'content-type' });
+    const cors = origin && allowed.includes(origin) ? corsHeaders(origin) : {};
+    const answer = (status, body) => reply(status, body, cors);
+
+    if (method === 'OPTIONS') {
+      // Preflight for the JSON POST. No body, nothing processed.
+      return { status: 204, headers: { 'Cache-Control': 'no-store', ...cors }, body: '' };
     }
-    if (Buffer.byteLength(rawBody ?? '', 'utf8') > MAX_BODY_BYTES) {
-      return reply(413, { status: 'error', error: 'too-large' });
+    if (method === 'GET') return answer(200, { delivery: configured ? 'email' : 'dry-run' });
+    if (method !== 'POST') return answer(405, { status: 'error', error: 'method-not-allowed' });
+
+    if (!(headers['content-type'] ?? '').includes('application/json')) {
+      return answer(415, { status: 'error', error: 'content-type' });
+    }
+    const declared = Number(headers['content-length']);
+    if (rawBody === null || (Number.isFinite(declared) && declared > MAX_BODY_BYTES) || Buffer.byteLength(rawBody ?? '', 'utf8') > MAX_BODY_BYTES) {
+      return answer(413, { status: 'error', error: 'too-large' });
     }
 
     let body;
     try {
       body = JSON.parse(rawBody);
     } catch {
-      return reply(400, { status: 'error', error: 'bad-json' });
+      return answer(400, { status: 'error', error: 'bad-json' });
     }
-    if (!body || typeof body !== 'object') return reply(400, { status: 'error', error: 'bad-json' });
+    if (!body || typeof body !== 'object') return answer(400, { status: 'error', error: 'bad-json' });
 
     // Honeypot field (invisible to humans) and a minimum compose time.
     if (body.website || typeof body.composeMs !== 'number' || body.composeMs < MIN_COMPOSE_MS) {
-      return reply(400, { status: 'error', error: 'rejected' });
+      return answer(400, { status: 'error', error: 'rejected' });
     }
 
     const v = validateWish(body.wish);
-    if (!v.ok) return reply(400, { status: 'error', error: v.error });
+    if (!v.ok) return answer(400, { status: 'error', error: v.error });
 
     // The joke wish: never delivered, never stored, never logged.
-    if (isWealthWish(v.value)) return reply(200, { status: 'rejected', reason: 'wealth' });
+    if (isWealthWish(v.value)) return answer(200, { status: 'rejected', reason: 'wealth' });
 
-    if (limited(ip || 'unknown')) return reply(429, { status: 'error', error: 'rate-limited' });
+    if (limited(ip || 'unknown')) return answer(429, { status: 'error', error: 'rate-limited' });
 
-    if (!configured) return reply(200, { status: 'accepted', delivery: 'dry-run' });
+    if (!configured) return answer(200, { status: 'accepted', delivery: 'dry-run' });
 
     try {
       await send({ apiKey: env.RESEND_API_KEY, to: env.WISH_TO_EMAIL, from: env.WISH_FROM_EMAIL, text: v.value });
-      return reply(200, { status: 'accepted', delivery: 'email' });
+      return answer(200, { status: 'accepted', delivery: 'email' });
     } catch {
       // Deliberately no details: nothing about the wish reaches the logs.
       console.error('[wish] delivery failed');
-      return reply(502, { status: 'error', error: 'delivery-failed' });
+      return answer(502, { status: 'error', error: 'delivery-failed' });
     }
   };
 }
 
-/** Reads a Node request body with a hard size cap (used by the dev server and Vercel adapter). */
+/**
+ * Reads a Node request body with a hard size cap (used by the dev server and
+ * Vercel adapter). Resolves to null when the body is larger than the limit,
+ * without buffering the excess.
+ */
 export function readRawBody(req, limit = MAX_BODY_BYTES) {
   return new Promise((resolve) => {
-    if (typeof req.body === 'string') return resolve(req.body);
-    if (req.body && typeof req.body === 'object' && !Buffer.isBuffer(req.body)) return resolve(JSON.stringify(req.body));
-    if (Buffer.isBuffer(req.body)) return resolve(req.body.toString('utf8'));
+    const capped = (str) => (Buffer.byteLength(str, 'utf8') > limit ? null : str);
+    if (typeof req.body === 'string') return resolve(capped(req.body));
+    if (req.body && typeof req.body === 'object' && !Buffer.isBuffer(req.body)) return resolve(capped(JSON.stringify(req.body)));
+    if (Buffer.isBuffer(req.body)) return resolve(capped(req.body.toString('utf8')));
     let size = 0;
+    let over = false;
     const chunks = [];
     req.on('data', (c) => {
       size += c.length;
-      if (size > limit + 1) {
-        // Keep just enough to report "too large" without buffering everything.
-        return;
-      }
-      chunks.push(c);
+      if (size > limit) over = true;
+      if (!over) chunks.push(c);
     });
-    req.on('end', () => resolve(Buffer.concat(chunks).toString('utf8')));
+    req.on('end', () => resolve(over ? null : Buffer.concat(chunks).toString('utf8')));
     req.on('error', () => resolve(''));
   });
 }

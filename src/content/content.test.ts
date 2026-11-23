@@ -88,8 +88,15 @@ describe('launch gate: no unfinished copy ships', () => {
   });
 
   it('never claims delivery when wishes are not connected', () => {
-    expect(garden.wish.acceptedDryRun).toMatch(/not (sent|connected)/i);
-    expect(garden.wish.disclosureDryRun).toMatch(/not connected/i);
+    // no backend connected: nothing sent
+    expect(garden.wish.resultNotConnected).toMatch(/not connected/i);
+    expect(garden.wish.resultNotConnected).toMatch(/not sent/i);
+    expect(garden.wish.disclosureNotConnected).toMatch(/not connected/i);
+    // backend reachable but email off: checked, not emailed, not saved
+    expect(garden.wish.acceptedDryRun).toMatch(/not emailed or saved/i);
+    expect(garden.wish.disclosureDryRun).toMatch(/not emailed or saved/i);
+    // only the live message may speak of sending
+    for (const s of [garden.wish.resultNotConnected, garden.wish.acceptedDryRun]) expect(s).not.toMatch(/has been sent|delivered/i);
     expect(project25.reveal.staticHosting).toMatch(/not connected/i);
   });
 });

@@ -45,7 +45,7 @@ On a later visit, the intro offers **Skip to THE 25th STAR** (after she has reac
 | Intro / rewind / One More Thing / dates text | `src/content/experience.ts` |
 | Everything in Princess Day (crystals, compliments, decree, hidden glints, closing) | `src/content/princessDay.ts` |
 | The Garden of Wishes (chapter titles, palette, ribbons, wish texts, certificate wording) | `src/content/garden.ts` |
-| Project 25 labels, status messages, chamber lines (public, nothing secret) | `src/content/birthday.ts` |
+| THE 25th STAR labels, status messages, entrance text, chamber lines and door refusals (public, nothing secret) | `src/content/birthday.ts` |
 | Birthday content format (placeholder only, see below) | `server/birthday-content.json` |
 
 ## The Garden of Wishes (Chapter IV of Princess Day)
@@ -65,11 +65,32 @@ It sits where the photo gallery used to be (`src/components/Garden/`), between t
 - Nothing is uploaded.
 
 ### Wishes (`/api/wish`)
-- **Dry-run by default.** With no email configured, the server validates a wish, then discards it. Nothing is emailed or saved, and the page says so honestly.
-- **To enable delivery later,** set these **server** environment variables (see `.env.example`): `RESEND_API_KEY`, `WISH_TO_EMAIL`, `WISH_FROM_EMAIL`, and optionally `WISH_ALLOWED_ORIGINS`. Never prefix them with `VITE_`, and never commit a real `.env` (it is git-ignored).
-- **Wish text is never stored, logged or shown back.** Email, when enabled, is plain text, exactly as she wrote it.
+**What happens today:**
+- **On GitHub Pages without a backend (the current live site):** nothing is sent. The page says delivery is not connected, and the wish is not sent or saved.
+- **With a backend whose email isn't configured:** dry-run. The server checks the wish, then discards it. Nothing is emailed or saved, and the page says so.
 - **The wealth joke is detected in the browser *and* on the server** (`shared/wishRules.js`, English + French, accent-insensitive, whole words). A detected wish is never sent anywhere.
-- **Abuse protection:** a honeypot field, a minimum compose time, a 2 KB body limit, and JSON only. Rate limits are 5 per hour per IP and 40 per day overall, but **in memory only, so best-effort**. On serverless hosting each instance has its own counter. Use the host's firewall or a shared store if strong limits are ever needed.
+- **Wish text is never stored, logged or shown back.** Email, when enabled, is plain text, exactly as she wrote it.
+
+**How the pieces fit:**
+- **Frontend** (`src/garden/wishClient.ts`, `src/utils/hosting.ts`): sends to `VITE_API_BASE_URL` + `/api/wish` when that **public** setting is present. Otherwise it uses the same-origin server (dev, preview, Vercel), or nothing at all on GitHub Pages.
+- **Backend** (`server/wishHandler.js` through `api/wish.js`):
+  - **Cross-origin access** for the origins in `WISH_ALLOWED_ORIGINS` only. It handles the browser's OPTIONS preflight check; any other origin gets a 403.
+  - **Size limit:** 413 for bodies over 2 KB.
+  - **Checks:** JSON only, a honeypot field, a minimum compose time, validation, the wealth check, then rate limits.
+  - **Rate limits:** 5 per hour per IP and 40 per day overall, **in memory, so best-effort only**. Use the host's firewall or a shared store for strong limits.
+  - **Startup warnings:** if email delivery is only partly configured, it logs the **names** of the missing settings (never their values). It also warns when delivery is on but `WISH_ALLOWED_ORIGINS` is empty.
+  - **Error messages:** every error code has a friendly message that says the wish was not sent.
+
+**Still needed for real delivery** (not done; needs your accounts and approval):
+1. **Host the API** somewhere that runs Node functions, separately from Pages. Vercel works as-is: import this repository as a Vercel project; it serves `api/wish.js` (and the birthday API) from `vercel.json`.
+2. **Email provider:** create a [Resend](https://resend.com) account and an API key. Sending requires a **verified sender domain** you control (a `github.io` address cannot be verified). Check Resend's current rules for its test sender.
+3. **Set the backend's private settings** in the host's environment settings, never in the repo:
+   - `RESEND_API_KEY`
+   - `WISH_TO_EMAIL`: the inbox that receives wishes
+   - `WISH_FROM_EMAIL`: an address on the verified domain
+   - `WISH_ALLOWED_ORIGINS=https://wilan789pro.github.io`
+4. **Point the site at the API:** in GitHub, *Settings → Secrets and variables → Actions → **Variables***, add `VITE_API_BASE_URL` = the backend's address (e.g. `https://your-api.vercel.app`). Then re-run the Pages workflow. It is public configuration, not a secret.
+5. **Test** with your own wish, and only then share the site.
 
 ### Birthday content (server-protected)
 > ⚠️ **The GitHub repository is public.** Anything committed, including `server/birthday-content.json` and `server/birthday-assets/`, is publicly readable, and stays in Git history even if deleted later. The committed file must stay the development placeholder (a test enforces `_placeholder: true`). Real birthday content needs a private source (for example a server environment variable or private storage), which has **not been set up yet**.
@@ -97,7 +118,7 @@ Bare file names in `src` are served through `/api/birthday-asset`, and only afte
 - Nothing in `server/` is imported by the frontend, so it never reaches the JS bundle (verified with a grep of `dist/`).
 - `/api/birthday` checks the **server's** clock. Before `2026-12-18T00:00:00+04:00` it returns `403 {status:"locked"}` with no content.
 - In production the `?now=` test override is ignored. Only `vite dev` honours it.
-- **This needs a host that runs the `api/` functions** (Vercel is configured in `vercel.json`). On purely static hosting (GitHub Pages and similar) the API doesn't exist: the chamber still opens visually, but shows "transmission could not be reached" and no content leaks.
+- **This needs a host that runs the `api/` functions** (Vercel is configured in `vercel.json`). On purely static hosting (GitHub Pages and similar) the API doesn't exist: the chamber still opens visually, then honestly says its private messenger is not connected yet. No content leaks.
 
 ## Testing the unlock (without touching the real date)
 
@@ -135,9 +156,9 @@ Nothing is deployed until you merge into `main` (GitHub Pages) or run a hosting 
 | Intro, rewind, Princess Day, crystals, compliments, decree, glints, closing, One More Thing, dates | ✅ works |
 | Garden: bloom, bouquet studio + PNG, certificate + PNG, bouquet saved in the browser | ✅ works (all local) |
 | Wish: the wealth joke and validation | ✅ works (local) |
-| Wish delivery | ❌ no server. The page says delivery isn't switched on, and the wish is checked and discarded (nothing sent or saved) |
-| Project 25 countdown and the chamber animation | ✅ works, using the **phone's** clock (no server time correction) |
-| Birthday content in the 25th Chamber | ❌ no server to release it. After opening, the chamber says the transmission isn't available on this version of the site |
+| Wish delivery | ❌ not connected until `VITE_API_BASE_URL` points to a separately hosted API (see *Wishes*). Until then the page says so and nothing is sent or saved |
+| THE 25th STAR countdown, one-time entrance and the chamber animation | ✅ works, using the **phone's** clock (no server time correction) |
+| Birthday content in the 25th Chamber | ❌ no server to release it. After opening, the chamber says its private messenger is not connected yet |
 
 **Why the birthday content can't be secured on GitHub Pages:** everything published there (and everything in this public repository) can be read by anyone at any time. A date check in the browser only hides things visually: anyone can read the files or change their clock. So no private content is published at all.
 

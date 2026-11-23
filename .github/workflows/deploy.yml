@@ -3,7 +3,8 @@
 #   but the deploy job refuses to publish anything that is not `main`.
 # - GitHub Pages is static hosting: the /api functions (birthday content,
 #   wishes, server time) do NOT run there. The `pages` build mode makes the
-#   site say so honestly instead of calling them. See README → GitHub Pages.
+#   site say so honestly instead of calling them. Wishes can use a separately
+#   hosted API via the VITE_API_BASE_URL repository variable. See README.
 name: Deploy to GitHub Pages
 
 on:
@@ -45,6 +46,11 @@ jobs:
 
       - name: Build for GitHub Pages (base /princessday/)
         run: npx vite build --mode pages
+        env:
+          # PUBLIC address of a separately hosted API (wishes). Set it as a repository
+          # *variable* (Settings → Secrets and variables → Actions → Variables), never
+          # a secret value. Empty = wishes stay "not connected" and nothing is sent.
+          VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL }}
 
       - name: Configure Pages
         uses: actions/configure-pages@v6

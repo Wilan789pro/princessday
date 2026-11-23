@@ -4,11 +4,13 @@ import { useEffect, useRef, useState } from 'react';
 import { WISH_MAX_LENGTH, wishLength } from '../../../shared/wishRules.js';
 import { audio } from '../../audio/AudioEngine';
 import { garden } from '../../content/garden';
-import { submitWish, wishDeliveryMode } from '../../garden/wishClient';
-import { STATIC_HOSTING } from '../../utils/hosting';
+import { submitWish, wishDeliveryMode, type WishDelivery } from '../../garden/wishClient';
+import { API_BASE_URL, STATIC_HOSTING, wishEndpoint } from '../../utils/hosting';
+
+/** Decided at build time: a configured backend, the same-origin server, or none. */
+const WISH_ENDPOINT = wishEndpoint({ apiBase: API_BASE_URL, staticHosting: STATIC_HOSTING });
 
 type Mode = 'sky' | 'writing' | 'sending' | 'accepted' | 'kept';
-type Delivery = 'email' | 'dry-run' | 'unknown';
 
 /**
  * CHAPTER IV – a shooting star and an optional, private wish.
@@ -22,8 +24,8 @@ export function WishUponAStar({ onContinue }: { onContinue: () => void }) {
   const [text, setText] = useState('');
   const [joke, setJoke] = useState(false);
   const [error, setError] = useState('');
-  const [delivery, setDelivery] = useState<Delivery>('unknown');
-  const [accepted, setAccepted] = useState<Delivery>('unknown');
+  const [delivery, setDelivery] = useState<WishDelivery>(WISH_ENDPOINT ? 'unknown' : 'not-connected');
+  const [accepted, setAccepted] = useState<WishDelivery>('unknown');
   const [honeypot, setHoneypot] = useState('');
   const composeStart = useRef(0);
   const areaRef = useRef<HTMLTextAreaElement>(null);
@@ -31,7 +33,7 @@ export function WishUponAStar({ onContinue }: { onContinue: () => void }) {
 
   useEffect(() => {
     let cancelled = false;
-    wishDeliveryMode(STATIC_HOSTING).then((d) => {
+    wishDeliveryMode(WISH_ENDPOINT).then((d) => {
       if (!cancelled) setDelivery(d);
     });
     return () => {
@@ -62,7 +64,7 @@ export function WishUponAStar({ onContinue }: { onContinue: () => void }) {
     // Validation and the wealth joke are handled locally first: the joke wish
     // never leaves the device. On static hosting nothing is sent at all.
     const r = await submitWish(text, {
-      staticHosting: STATIC_HOSTING,
+      endpoint: WISH_ENDPOINT,
       composeMs: Math.round(performance.now() - composeStart.current),
       honeypot,
     });
@@ -70,10 +72,11 @@ export function WishUponAStar({ onContinue }: { onContinue: () => void }) {
       setMode('writing');
       return showJoke();
     }
-    if (r.kind === 'accepted') {
+    if (r.kind === 'accepted' || r.kind === 'not-connected') {
+      // The wish text is cleared from memory either way; nothing is stored.
       setText('');
       setJoke(false);
-      setAccepted(r.delivery);
+      setAccepted(r.kind === 'accepted' ? r.delivery : 'not-connected');
       setMode('accepted');
       audio.golden();
       return;
@@ -206,7 +209,7 @@ export function WishUponAStar({ onContinue }: { onContinue: () => void }) {
                 </p>
               )}
               <p id="wish-disclosure" className="wish__disclosure">
-                {delivery === 'email' ? w.disclosureLive : w.disclosureDryRun}
+                {delivery === 'email' ? w.disclosureLive : delivery === 'dry-run' ? w.disclosureDryRun : w.disclosureNotConnected}
               </p>
               <div className="garden__actions">
                 <button
@@ -240,7 +243,13 @@ export function WishUponAStar({ onContinue }: { onContinue: () => void }) {
                 transition={{ duration: reduced ? 0 : 1.6 }}
               />
               <p className="wish__done-text serif">
-                {mode === 'kept' ? w.keptPrivate : accepted === 'email' ? w.acceptedLive : w.acceptedDryRun}
+                {mode === 'kept'
+                  ? w.keptPrivate
+                  : accepted === 'email'
+                    ? w.acceptedLive
+                    : accepted === 'dry-run'
+                      ? w.acceptedDryRun
+                      : w.resultNotConnected}
               </p>
             </motion.div>
           )}
