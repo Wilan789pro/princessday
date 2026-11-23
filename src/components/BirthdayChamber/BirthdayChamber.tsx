@@ -7,6 +7,7 @@ import { BIRTHDAY_MS, PRINCESS_DAY_MS } from '../../utils/dates';
 import { now } from '../../utils/clock';
 import { Crystal } from '../Crystal/Crystal';
 import { initialDoorState, pressLockedDoor, type DoorReaction } from '../../utils/refusals';
+import { shouldAutoOpen } from '../../utils/cinematic';
 import './BirthdayChamber.css';
 
 type ChamberState = 'locked' | 'ready' | 'opening' | 'open';
@@ -15,6 +16,8 @@ type Phase = 'idle' | 'charge' | 'unlock' | 'light' | 'part' | 'done';
 interface Props {
   /** True once the countdown has reached zero. */
   reached: boolean;
+  /** While THE 25th STAR entrance plays, a live zero-crossing waits until it ends. */
+  holdAutoOpen?: boolean;
   /** Fired when the light breaks through – switches the page to gold. */
   onGold: () => void;
   /** Fired when the doors have fully opened. */
@@ -48,7 +51,7 @@ function FacetPattern() {
 }
 
 /** ACT VI-B – the sealed vault door, and its opening ceremony. */
-export function BirthdayChamber({ reached, onGold, onOpened }: Props) {
+export function BirthdayChamber({ reached, holdAutoOpen = false, onGold, onOpened }: Props) {
   const c = project25.chamber;
   const reduced = !!useReducedMotion();
   const [state, setState] = useState<ChamberState>(reached ? 'ready' : 'locked');
@@ -106,14 +109,17 @@ export function BirthdayChamber({ reached, onGold, onOpened }: Props) {
   };
 
   // Live transition: the countdown hit zero while she was here → open automatically.
+  // (Deferred – never triggered – by the entrance: the decision is still `reached`.)
   useEffect(() => {
-    if (reached && wasLockedOnMount.current && state === 'locked') {
-      wasLockedOnMount.current = false;
-      const id = setTimeout(open, 900);
+    if (shouldAutoOpen({ reached, lockedOnMount: wasLockedOnMount.current, state, entranceRunning: holdAutoOpen })) {
+      const id = setTimeout(() => {
+        wasLockedOnMount.current = false;
+        open();
+      }, 900);
       return () => clearTimeout(id);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [reached]);
+  }, [reached, holdAutoOpen]);
 
   useEffect(() => () => timers.current.forEach(clearTimeout), []);
 

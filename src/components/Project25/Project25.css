@@ -1,0 +1,254 @@
+/* ============================================================
+   THE 25th STAR – one-time entrance
+   The real page is always laid out (no jumps); while entering, its parts
+   are revealed in stages by the p25-at-* classes on <main>.
+   ============================================================ */
+
+.p25-entering .prismclock .pc-holo,
+.p25-entering .prismclock .pc-header,
+.p25-entering .prismclock .pc-countdown,
+.p25-entering .prismclock .pc-tz,
+.p25-entering .prismclock .pc-status,
+.p25-entering .prismclock .pc-progress,
+.p25-entering .p25-chamber-wrap {
+  opacity: 0;
+  transition: opacity 1s ease;
+}
+
+/* 5.2s – the title, crystal and rings appear around the gliding countdown */
+.p25-entering.p25-at-title .prismclock .pc-header {
+  opacity: 1;
+}
+
+.p25-entering .prismclock .pc-title {
+  transition: letter-spacing 1.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.p25-entering:not(.p25-at-title) .prismclock .pc-title {
+  letter-spacing: 0.45em;
+}
+
+/* 6.6s – the countdown has landed; status, ticker and progress follow */
+.p25-entering.p25-at-details .prismclock .pc-holo,
+.p25-entering.p25-at-details .prismclock .pc-countdown,
+.p25-entering.p25-at-details .prismclock .pc-tz,
+.p25-entering.p25-at-details .prismclock .pc-status,
+.p25-entering.p25-at-details .prismclock .pc-progress {
+  opacity: 1;
+}
+
+.p25-entering.p25-at-details .prismclock .pc-countdown {
+  transition: none; /* swaps in exactly where the overlay landed */
+}
+
+.p25-entering .prismclock .pc-tz {
+  transition-delay: 0.1s;
+}
+
+.p25-entering .prismclock .pc-status {
+  transition-delay: 0.3s;
+}
+
+.p25-entering .prismclock .pc-progress {
+  transition-delay: 0.5s;
+}
+
+/* the status lines wait until the countdown has landed (no overlap while it glides) */
+.p25-entering:not(.p25-at-details) .prismclock .pc-meta {
+  opacity: 0;
+}
+
+.p25-entering .prismclock .pc-meta {
+  transition: opacity 1s ease 0.15s;
+}
+
+/* the progress bar fills from zero to today */
+.p25-entering:not(.p25-at-details) .prismclock .pc-progress__fill {
+  transform: scaleX(0) !important;
+}
+
+.p25-entering .prismclock .pc-progress__fill {
+  transition: transform 1.6s cubic-bezier(0.16, 1, 0.3, 1) 0.6s;
+}
+
+/* 8.0s – the chamber fades in below (it was always in the layout) */
+.p25-entering:not(.p25-at-chamber) .p25-chamber-wrap {
+  pointer-events: none;
+}
+
+.p25-entering.p25-at-chamber .p25-chamber-wrap {
+  opacity: 1;
+  transition-duration: 1.4s;
+}
+
+/* ------------------------------------------------ overlay */
+.star-entrance {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}
+
+.star-entrance__veil {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 50% 50%, #06101f 0%, #02060d 70%);
+  transition: opacity 1.3s ease;
+}
+
+.star-entrance.is-landing .star-entrance__veil {
+  opacity: 0;
+}
+
+.star-entrance__point {
+  opacity: 1;
+  transition:
+    opacity 0.9s ease,
+    scale 1.2s ease,
+    box-shadow 1.2s ease;
+}
+
+.star-entrance--gather .star-entrance__point {
+  scale: 1.6;
+  box-shadow:
+    0 0 16px 6px rgba(168, 223, 255, 1),
+    0 0 60px 20px rgba(57, 139, 255, 0.7);
+}
+
+.star-entrance--digits .star-entrance__point,
+.star-entrance--hold .star-entrance__point,
+.star-entrance.is-landing .star-entrance__point {
+  opacity: 0;
+  scale: 4;
+}
+
+.star-entrance__ring {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  width: 120px;
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  border-radius: 50%;
+  border: 1px solid rgba(102, 229, 245, 0.5);
+  opacity: 0;
+  scale: 0.2;
+  transition:
+    opacity 1s ease,
+    scale 1.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.star-entrance__ring--2 {
+  width: 220px;
+  border-style: dashed;
+  border-color: rgba(168, 223, 255, 0.3);
+}
+
+.star-entrance--gather .star-entrance__ring {
+  opacity: 1;
+  scale: 1;
+}
+
+.star-entrance--digits .star-entrance__ring,
+.star-entrance--hold .star-entrance__ring {
+  opacity: 0.35;
+  scale: 2.6;
+}
+
+.star-entrance.is-landing .star-entrance__ring {
+  opacity: 0;
+  scale: 3.2;
+}
+
+.star-entrance__centre {
+  position: relative;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0 calc(var(--safe-right) + 20px) 0 calc(var(--safe-left) + 20px);
+}
+
+.star-entrance__clock {
+  max-width: 100%;
+  transform-origin: center;
+}
+
+.star-entrance__clock .pc-countdown {
+  margin: 0;
+}
+
+/* gentle heartbeat on the seconds while the countdown is alone on screen */
+.star-entrance__clock .is-heartbeat .pc-unit:last-child .pc-unit__digits {
+  animation: star-heartbeat 1s ease-in-out infinite;
+}
+
+@keyframes star-heartbeat {
+  0%,
+  100% {
+    text-shadow: 0 0 14px rgba(57, 139, 255, 0.95), 0 0 40px rgba(57, 139, 255, 0.45);
+  }
+  30% {
+    text-shadow: 0 0 22px rgba(168, 223, 255, 1), 0 0 70px rgba(102, 229, 245, 0.8);
+  }
+}
+
+.star-entrance__date {
+  margin: 22px 0 0;
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  color: var(--c-ice);
+  white-space: pre;
+  opacity: 0;
+  transition: opacity 1.2s ease;
+}
+
+.star-entrance--hold .star-entrance__date {
+  opacity: 0.85;
+}
+
+.star-entrance__skip {
+  position: fixed;
+  bottom: calc(var(--safe-bottom) + 22px);
+  left: 0;
+  right: 0;
+  width: fit-content;
+  min-height: 44px;
+  margin: 0 auto;
+  padding: 0 18px;
+  border-radius: 999px;
+  font-family: var(--f-mono);
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  border: 1px solid rgba(168, 223, 255, 0.2);
+  background: rgba(7, 20, 38, 0.6);
+  pointer-events: auto;
+  transition: opacity 0.6s ease;
+}
+
+.star-entrance.is-landing .star-entrance__skip {
+  opacity: 0;
+  pointer-events: none;
+}
+
+@media (max-width: 380px) {
+  .star-entrance__date {
+    font-size: 9.5px;
+    letter-spacing: 0.16em;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .star-entrance__clock .is-heartbeat .pc-unit:last-child .pc-unit__digits {
+    animation: none;
+  }
+}
+
+.star-entrance.is-landing .star-entrance__date {
+  opacity: 0;
+  transition-duration: 0.6s;
+}

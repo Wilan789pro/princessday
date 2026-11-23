@@ -1,6 +1,6 @@
 # Princess Prism™
 
-A cinematic, mobile-first (iPhone-first) Princess Day experience with a hidden second chapter: **Project 25**.
+A cinematic, mobile-first (iPhone-first) Princess Day experience for ❤️💎 Princess Prism 💎❤️™, with a hidden second chapter: **THE 25th STAR**.
 
 React + TypeScript + Vite + Framer Motion. Synthesised Web Audio, so there are no sound files.
 
@@ -22,11 +22,21 @@ npm run build      # typecheck + production build into dist/
 | — | `Arrival` | 18 NOVEMBER 2026 · WEDNESDAY · PRINCESS DAY |
 | III | `PrincessDay` | Crown crystals → compliment generator → royal decree (+ seal) → hidden glints → **The Garden of Wishes** → closing |
 | IV | `OneMoreThing` | "Happy Princess Day. Fin." → darkness → pause → **One More Thing...** |
-| V | `DateReveal` | 18 Nov ↔ 18 Dec · **THE UNIVERSE HAS GREAT TASTE.** |
-| VI | `Project25` → `PrismClock` + `BirthdayChamber` | Live countdown, status ticker, sealed vault |
+| V | `DateReveal` | 18 Nov ↔ 18 Dec · **THE UNIVERSE HAS GREAT TASTE.** After a reading pause the cards drift together, the beam contracts into the sapphire and it shrinks to a single point of light. Automatic, no tap needed. |
+| VI | `Project25` → `PrismClock` + `BirthdayChamber` | **THE 25th STAR**. The first visit plays a one-time entrance: the point becomes the countdown, alone on screen, which then glides into place while the page and the chamber appear. Live countdown, status ticker, sealed vault with playful refusals. |
 | VII | `BirthdayReveal` | Opens at 18.12.2026 00:00 Mauritius. Content comes from the server. |
 
-On a later visit, the intro offers **Skip to Project 25** (after she has reached it once, or after the birthday).
+On a later visit, the intro offers **Skip to THE 25th STAR** (after she has reached it once, or after the birthday).
+
+**One-time entrance:** completion is stored in `localStorage['prism:star-entrance:v1']`.
+- Later visits show the finished countdown directly.
+- There's a **Skip intro** button (or press Esc), and reduced motion gets a ~1.6s crossfade.
+- If the countdown reaches zero during the entrance, the chamber waits until the entrance ends, then opens as usual.
+- To see it again, run `localStorage.removeItem('prism:star-entrance:v1')` in the browser console. Bump the `:v1` suffix in `src/utils/cinematic.ts` to replay it for everyone after a redesign.
+
+**Royal name:** `src/content/royal.ts` is the single source of truth for ❤️💎 Princess Prism 💎❤️™ (a test rejects other spellings). Render it with `<RoyalName />` / `<WithRoyalName />` so the emoji stay outside gradient text.
+
+**Locked door:** each press shows one complete line, chosen from a shuffle bag (`src/utils/refusals.ts`; text in `src/content/birthday.ts`). Presses never affect when the chamber opens.
 
 ## Editing content
 

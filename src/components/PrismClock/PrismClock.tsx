@@ -40,6 +40,30 @@ function Unit({ value, label }: { value: number; label: string }) {
   );
 }
 
+/** The four-unit countdown (shared with THE 25th STAR entrance so both look identical). */
+export function CountdownDisplay({ remaining, className = '', hideFromAT = false }: { remaining: Remaining; className?: string; hideFromAT?: boolean }) {
+  const { days, hours, minutes, seconds, reached } = remaining;
+  const spoken = reached
+    ? 'Countdown complete.'
+    : `${days} days, ${hours} hours, ${minutes} minutes and ${seconds} seconds remaining.`;
+  return (
+    <div
+      className={`pc-countdown glass ${className}`}
+      role={hideFromAT ? undefined : 'timer'}
+      aria-label={hideFromAT ? undefined : spoken}
+      aria-hidden={hideFromAT || undefined}
+    >
+      <Unit value={days} label="Days" />
+      <span className="pc-sep mono" aria-hidden="true">:</span>
+      <Unit value={hours} label="Hours" />
+      <span className="pc-sep mono" aria-hidden="true">:</span>
+      <Unit value={minutes} label="Minutes" />
+      <span className="pc-sep mono" aria-hidden="true">:</span>
+      <Unit value={seconds} label="Seconds" />
+    </div>
+  );
+}
+
 function StatusTicker({ done }: { done: boolean }) {
   const msgs = project25.statusMessages;
   const [index, setIndex] = useState(0);
@@ -87,11 +111,7 @@ export function PrismClock({ remaining }: Props) {
   const p = project25;
   const span = BIRTHDAY_MS - PRINCESS_DAY_MS;
   const progress = Math.min(1, Math.max(0, (now() - PRINCESS_DAY_MS) / span));
-  const { days, hours, minutes, seconds, reached } = remaining;
-
-  const spoken = reached
-    ? 'Countdown complete.'
-    : `${days} days, ${hours} hours, ${minutes} minutes and ${seconds} seconds remaining.`;
+  const { reached } = remaining;
 
   return (
     <section className={`section prismclock ${reached ? 'is-reached' : ''}`} aria-labelledby="p25-title">
@@ -125,15 +145,7 @@ export function PrismClock({ remaining }: Props) {
         </dl>
       </header>
 
-      <div className="pc-countdown glass" role="timer" aria-label={spoken}>
-        <Unit value={days} label="Days" />
-        <span className="pc-sep mono" aria-hidden="true">:</span>
-        <Unit value={hours} label="Hours" />
-        <span className="pc-sep mono" aria-hidden="true">:</span>
-        <Unit value={minutes} label="Minutes" />
-        <span className="pc-sep mono" aria-hidden="true">:</span>
-        <Unit value={seconds} label="Seconds" />
-      </div>
+      <CountdownDisplay remaining={remaining} />
 
       <p className="pc-tz mono">{p.timezoneNote}</p>
 

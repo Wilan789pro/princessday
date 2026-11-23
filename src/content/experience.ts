@@ -52,6 +52,5 @@ export const experience = {
     left: { day: '18', month: 'November', label: 'Princess Day' },
     right: { day: '18', month: 'December', label: `The Birthday of ${ROYAL_NAME}` },
     tagline: 'THE UNIVERSE HAS GREAT TASTE.', // keep this line exactly
-    continueLabel: 'Follow THE 25th STAR',
   },
 };

@@ -6,6 +6,8 @@ export type StarMode = 'drift' | 'warp' | 'gold';
 
 interface Props {
   mode: StarMode;
+  /** Darkens the whole sky (used by the cinematic hand-overs). */
+  dimmed?: boolean;
 }
 
 interface Star {
@@ -27,7 +29,7 @@ const GOLD = ['242,198,109', '255,228,170', '255,244,214', '216,170,90', '168,22
  *  warp  – stars recede into the centre (time running backwards)
  *  gold  – warm particles rising, for the birthday chamber
  */
-export function Starfield({ mode }: Props) {
+export function Starfield({ mode, dimmed = false }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const modeRef = useRef<StarMode>(mode);
   const tier = useDeviceTier();
@@ -177,7 +179,7 @@ export function Starfield({ mode }: Props) {
   }, [mode, tier]);
 
   return (
-    <div className={`starfield starfield--${mode}`} aria-hidden="true">
+    <div className={`starfield starfield--${mode} ${dimmed ? 'starfield--dimmed' : ''}`} aria-hidden="true">
       <div className="starfield__nebula" />
       <canvas ref={canvasRef} className="starfield__canvas" />
     </div>

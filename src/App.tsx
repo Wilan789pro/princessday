@@ -14,6 +14,7 @@ import { Starfield, type StarMode } from './components/Starfield/Starfield';
 import { TimeRewind } from './components/TimeRewind/TimeRewind';
 import { TEST_CLOCK_ENABLED, now, syncWithServer } from './utils/clock';
 import { BIRTHDAY_MS } from './utils/dates';
+import { chooseEntrance } from './utils/cinematic';
 
 const STAGES = ['intro', 'rewind', 'arrival', 'princess', 'oneMore', 'dates', 'project25'] as const;
 type Stage = (typeof STAGES)[number];
@@ -41,13 +42,18 @@ const sceneMotion: Record<Stage, Pick<MotionProps, 'initial' | 'animate' | 'exit
   arrival: { initial: { opacity: 1 }, animate: { opacity: 1 }, exit: { opacity: 0, transition: { duration: 0.7 } } },
   princess: { initial: { opacity: 0 }, animate: { opacity: 1 }, exit: { opacity: 0, transition: { duration: 1.2 } } },
   oneMore: { initial: { opacity: 0 }, animate: { opacity: 1 }, exit: { opacity: 0, transition: { duration: 0.9 } } },
-  dates: { initial: { opacity: 0 }, animate: { opacity: 1 }, exit: { opacity: 0, transition: { duration: 0.8 } } },
-  project25: { initial: { opacity: 0 }, animate: { opacity: 1 }, exit: { opacity: 0 } },
+  // The dates end on a single point of light in an already-dark sky, which THE
+  // 25th STAR picks up at the same spot: cut instantly, no fade, no blank frame.
+  dates: { initial: { opacity: 0 }, animate: { opacity: 1 }, exit: { opacity: 1, transition: { duration: 0 } } },
+  project25: { initial: { opacity: 1 }, animate: { opacity: 1 }, exit: { opacity: 0 } },
 };
 
 export default function App() {
   const [stage, setStage] = useState<Stage>(initialStage);
   const [gold, setGold] = useState(false);
+  const [starsDimmed, setStarsDimmed] = useState(false);
+  /** Presentation only: whether THE 25th STAR plays its one-time entrance. */
+  const [starEntrance, setStarEntrance] = useState<'cinematic' | 'none'>(() => chooseEntrance());
   const { enabled } = useSound();
 
   useEffect(() => {
@@ -87,9 +93,14 @@ export default function App() {
     setStage('rewind');
   };
 
+  const goToStar = useCallback(() => {
+    setStarEntrance(chooseEntrance());
+    setStage('project25');
+  }, []);
+
   const skip = () => {
     startAudio();
-    setStage('project25');
+    goToStar();
   };
 
   const canSkip = hasReached25() || now() >= BIRTHDAY_MS;
@@ -99,7 +110,7 @@ export default function App() {
 
   return (
     <>
-      <Starfield mode={starMode} />
+      <Starfield mode={starMode} dimmed={starsDimmed && (stage === 'dates' || stage === 'project25')} />
       <SoundToggle />
       <span className="brand-mark" aria-hidden="true">
         PRISM
@@ -113,8 +124,8 @@ export default function App() {
             {stage === 'arrival' && <Arrival onContinue={() => setStage('princess')} />}
             {stage === 'princess' && <PrincessDay onComplete={() => setStage('oneMore')} />}
             {stage === 'oneMore' && <OneMoreThing onContinue={() => setStage('dates')} />}
-            {stage === 'dates' && <DateReveal onContinue={() => setStage('project25')} />}
-            {stage === 'project25' && <Project25 onGold={setGold} />}
+            {stage === 'dates' && <DateReveal onOutro={() => setStarsDimmed(true)} onContinue={goToStar} />}
+            {stage === 'project25' && <Project25 onGold={setGold} entrance={starEntrance} onSettled={() => setStarsDimmed(false)} />}
           </motion.div>
         </AnimatePresence>
       </div>

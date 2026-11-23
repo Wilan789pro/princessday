@@ -334,3 +334,22 @@ img {
   --accent: var(--c-gold);
   --glass-border: rgba(242, 198, 109, 0.28);
 }
+
+/* The single point of light shared by the dates outro and THE 25th STAR entrance.
+   Fixed at the centre of the viewport so the hand-over between scenes is seamless. */
+.star-point {
+  position: fixed;
+  z-index: 45;
+  top: 50%;
+  left: 50%;
+  width: 9px;
+  height: 9px;
+  translate: -50% -50%;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow:
+    0 0 10px 3px rgba(168, 223, 255, 0.95),
+    0 0 34px 10px rgba(57, 139, 255, 0.6);
+  opacity: 0;
+  pointer-events: none;
+}

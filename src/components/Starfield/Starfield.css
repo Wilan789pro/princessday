@@ -10,6 +10,12 @@
 .starfield__canvas {
   position: absolute;
   inset: 0;
+  transition: opacity 1.4s ease;
+}
+
+.starfield--dimmed .starfield__canvas,
+.starfield--dimmed .starfield__nebula {
+  opacity: 0.12;
 }
 
 .starfield__nebula {

@@ -29,6 +29,12 @@ export const project25 = {
   statusReached: 'THE 25th STAR HAS RISEN.',
   statusIntervalMs: 5200,
 
+  /** First-visit entrance (played once per browser). */
+  entrance: {
+    dateLine: '18 · 12 · 2026  —  00:00  —  PORT LOUIS',
+    skipLabel: 'Skip intro',
+  },
+
   chamber: {
     name: 'THE 25TH CHAMBER',
     description: 'Something has been placed inside. It is sealed until the clock says otherwise.',
