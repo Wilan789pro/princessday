@@ -87,20 +87,16 @@ describe('launch gate: no unfinished copy ships', () => {
     expect(princessDay.closing.body.length).toBeGreaterThan(80);
   });
 
-  it('wish messages are honest about where a wish goes and whether it was sent', () => {
-    // the confirmation is the agreed wording, and is shown only after storage succeeded
-    expect(garden.wish.acceptedVault).toBe(
-      'Your wish has found its way to the stars. Some wishes are meant to travel quietly. Thank you for sharing yours.',
-    );
-    // visitors are told plainly where a wish goes
-    expect(garden.wish.disclosureVault).toMatch(/privately/i);
-    expect(garden.wish.disclosureVault).toMatch(/person who made this garden/i);
-    // when nothing can be sent, the copy says so
-    expect(garden.wish.disclosureNotConnected).toMatch(/not connected/i);
-    expect(garden.wish.disclosureUnavailable).toMatch(/not ready/i);
-    expect(garden.wish.errors['not-connected']).toMatch(/not sent/i);
-    // no leftover email wording anywhere in the wish copy
-    expect(JSON.stringify(garden.wish)).not.toMatch(/email|e-mail/i);
+  it('wish messages are honest: the wish stays on the device and goes onto her certificate', () => {
+    expect(garden.wish.accepted).toBe('Your wish has found its place among the stars. It will be waiting for you on your Royal Seal.');
+    expect(garden.wish.disclosure).toMatch(/not sent anywhere/i);
+    expect(garden.wish.disclosure).toMatch(/Royal Seal certificate/i);
+    // no claim of private delivery, remote storage or email anywhere in the wish copy
+    const copy = JSON.stringify(garden.wish);
+    expect(copy).not.toMatch(/email|e-mail|privately|deliver|vault|inbox|server|stored/i);
+    expect(copy).not.toMatch(/was not sent/i);
+    // every error a wish check can return has a message
+    for (const code of ['empty', 'not-text', 'too-long', 'invalid-characters', 'generic']) expect(garden.wish.errors[code], code).toBeTruthy();
     expect(project25.reveal.staticHosting).toMatch(/not connected/i);
   });
 });

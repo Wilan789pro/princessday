@@ -1,50 +1,39 @@
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
-import { ArrowRight, Send, Star } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { ArrowRight, Sparkles, Star } from 'lucide-react';
+import { useRef, useState } from 'react';
 import { WISH_MAX_LENGTH, wishLength } from '../../../shared/wishRules.js';
 import { audio } from '../../audio/AudioEngine';
 import { garden } from '../../content/garden';
-import { submitWish, wishDeliveryMode, type WishDelivery } from '../../garden/wishClient';
-import { API_BASE_URL, STATIC_HOSTING, wishEndpoint } from '../../utils/hosting';
+import { makeWish } from '../../garden/starWish';
 
-/** Decided at build time: a configured backend, the same-origin server, or none. */
-const WISH_ENDPOINT = wishEndpoint({ apiBase: API_BASE_URL, staticHosting: STATIC_HOSTING });
+type Mode = 'sky' | 'writing' | 'accepted' | 'kept';
 
-type Mode = 'sky' | 'writing' | 'sending' | 'accepted' | 'kept';
+interface Props {
+  onContinue: () => void;
+  /** Her wish for the Royal Seal certificate (null when she keeps it to herself). */
+  onWish: (wish: string | null) => void;
+}
 
 /**
- * CHAPTER IV – a shooting star and an optional, private wish.
- * The wish text lives only in component state: it is never stored, logged or
- * displayed back, and the wealth joke is caught here *and* on the server.
+ * CHAPTER III – a shooting star and an optional wish.
+ * The wish never leaves the device: it is handed to the Garden, which keeps it
+ * for this visit and writes it on the Royal Seal certificate. The wealth joke
+ * is caught here and never kept.
  */
-export function WishUponAStar({ onContinue }: { onContinue: () => void }) {
+export function WishUponAStar({ onContinue, onWish }: Props) {
   const w = garden.wish;
   const reduced = !!useReducedMotion();
   const [mode, setMode] = useState<Mode>('sky');
   const [text, setText] = useState('');
   const [joke, setJoke] = useState(false);
   const [error, setError] = useState('');
-  const [delivery, setDelivery] = useState<WishDelivery>(WISH_ENDPOINT ? 'unknown' : 'not-connected');
-  const [honeypot, setHoneypot] = useState('');
-  const composeStart = useRef(0);
   const areaRef = useRef<HTMLTextAreaElement>(null);
   const length = wishLength(text);
-
-  useEffect(() => {
-    let cancelled = false;
-    wishDeliveryMode(WISH_ENDPOINT).then((d) => {
-      if (!cancelled) setDelivery(d);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   const catchStar = () => {
     audio.init();
     audio.chime(5);
     setMode('writing');
-    composeStart.current = performance.now();
     setTimeout(() => areaRef.current?.focus({ preventScroll: true }), 450);
   };
 
@@ -56,41 +45,29 @@ export function WishUponAStar({ onContinue }: { onContinue: () => void }) {
     setTimeout(() => areaRef.current?.focus({ preventScroll: true }), 50);
   };
 
-  const submit = async (e: React.FormEvent) => {
+  const submit = (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    setMode('sending');
-    // Validation and the wealth joke are handled locally first: the joke wish
-    // never leaves the device. On static hosting nothing is sent at all.
-    const r = await submitWish(text, {
-      endpoint: WISH_ENDPOINT,
-      composeMs: Math.round(performance.now() - composeStart.current),
-      honeypot,
-    });
-    if (r.kind === 'wealth') {
-      setMode('writing');
-      return showJoke();
-    }
-    if (r.kind === 'accepted') {
-      // Only after the vault confirmed storage: clear the input and celebrate.
-      setText('');
-      setJoke(false);
-      setMode('accepted');
-      audio.golden();
-      return;
-    }
-    setMode('writing');
-    setError(w.errors[r.error] ?? w.errors.generic);
+    const r = makeWish(text);
+    if (r.kind === 'wealth') return showJoke();
+    if (r.kind === 'error') return setError(w.errors[r.error] ?? w.errors.generic);
+    // An ordinary wish: it will be waiting on her Royal Seal certificate.
+    onWish(r.wish);
+    setText('');
+    setJoke(false);
+    setMode('accepted');
+    audio.golden();
   };
 
   const keep = () => {
+    onWish(null);
     setText('');
     setJoke(false);
     setMode('kept');
     audio.chime(1);
   };
 
-  const writing = mode === 'writing' || mode === 'sending';
+  const writing = mode === 'writing';
 
   return (
     <div className="wish">
@@ -183,18 +160,6 @@ export function WishUponAStar({ onContinue }: { onContinue: () => void }) {
                 spellCheck
                 aria-describedby="wish-disclosure wish-count"
                 aria-invalid={length > WISH_MAX_LENGTH || undefined}
-                disabled={mode === 'sending'}
-              />
-              {/* Honeypot: invisible to people, tempting to bots. */}
-              <input
-                className="wish__hp"
-                type="text"
-                name="website"
-                tabIndex={-1}
-                autoComplete="off"
-                aria-hidden="true"
-                value={honeypot}
-                onChange={(e) => setHoneypot(e.target.value)}
               />
               <div className="wish__meta">
                 <span id="wish-count" className={`wish__count mono ${length > WISH_MAX_LENGTH ? 'is-over' : ''}`}>
@@ -207,17 +172,17 @@ export function WishUponAStar({ onContinue }: { onContinue: () => void }) {
                 </p>
               )}
               <p id="wish-disclosure" className="wish__disclosure">
-                {delivery === 'not-connected' ? w.disclosureNotConnected : delivery === 'unavailable' ? w.disclosureUnavailable : w.disclosureVault}
+                {w.disclosure}
               </p>
               <div className="garden__actions">
                 <button
                   type="submit"
                   className="btn btn--primary"
-                  disabled={mode === 'sending' || length === 0 || length > WISH_MAX_LENGTH}
+                  disabled={length === 0 || length > WISH_MAX_LENGTH}
                 >
-                  <Send size={17} aria-hidden="true" /> {mode === 'sending' ? 'Sending…' : w.sendLabel}
+                  <Sparkles size={17} aria-hidden="true" /> {w.sendLabel}
                 </button>
-                <button type="button" className="btn btn--ghost btn--small" onClick={keep} disabled={mode === 'sending'}>
+                <button type="button" className="btn btn--ghost btn--small" onClick={keep}>
                   {w.skipLabel}
                 </button>
               </div>
@@ -241,7 +206,7 @@ export function WishUponAStar({ onContinue }: { onContinue: () => void }) {
                 transition={{ duration: reduced ? 0 : 1.6 }}
               />
               <p className="wish__done-text serif">
-                {mode === 'kept' ? w.keptPrivate : w.acceptedVault}
+                {mode === 'kept' ? w.keptPrivate : w.accepted}
               </p>
             </motion.div>
           )}

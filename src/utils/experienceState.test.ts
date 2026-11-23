@@ -1,9 +1,10 @@
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { ENTRANCE_SEEN_KEY } from './cinematic';
 import { STORAGE_KEY as BOUQUET_KEY } from '../garden/bouquetModel';
-import { EXPERIENCE_EPOCH_KEY, KNOWN_VISITOR_KEYS, PRISM_KEY_PREFIX, clearVisitorProgress, syncExperienceEpoch, visitorKeys } from './experienceState';
+import { STAR_WISH_KEY, loadStarWish, saveStarWish } from '../garden/starWish';
+import { KNOWN_VISITOR_KEYS, PRISM_KEY_PREFIX, clearVisitorProgress, visitorKeys, wantsReset } from './experienceState';
 
 class MemoryStorage {
   private m = new Map<string, string>();
@@ -36,11 +37,10 @@ function usedBrowser() {
   local.setItem(BOUQUET_KEY, '{"version":1,"flowers":[],"ribbon":"#C9D3E0"}');
   local.setItem(ENTRANCE_SEEN_KEY, '1');
   session.setItem('prism:garden-secrets', '["radiance"]');
+  session.setItem(STAR_WISH_KEY, 'To see the northern lights');
   local.setItem('unrelated-site-key', 'keep');
   return { local, session };
 }
-
-const epochResponse = (epoch: unknown) => vi.fn().mockResolvedValue({ ok: true, json: async () => ({ epoch }) }) as unknown as typeof fetch;
 
 // ------------------------------------------------------------------ inventory
 function sourceFiles(dir: string): string[] {
@@ -63,27 +63,35 @@ describe('visitor progress inventory', () => {
     }
   });
 
-  it('nothing is persisted outside local/session storage (no cookies, no IndexedDB)', () => {
+  it('nothing is persisted outside local/session storage (no cookies, no IndexedDB, no server)', () => {
     for (const s of sources) {
-      expect(s).not.toMatch(/document\.cookie|indexedDB|caches\.open/);
+      expect(s).not.toMatch(/document\.cookie|indexedDB|caches\.open|\/api\/experience|\/api\/vault|\/api\/wish/);
     }
   });
 
   it('every direct storage write uses a prism: key', () => {
     for (const s of sources) {
       for (const m of s.matchAll(/(?:localStorage|sessionStorage)\.setItem\(\s*([^,]+),/g)) {
-        expect(m[1]).toMatch(/KEY|prism:|EXPERIENCE_EPOCH_KEY|ENTRANCE_SEEN_KEY|STORAGE_KEY/);
+        expect(m[1]).toMatch(/KEY|prism:|ENTRANCE_SEEN_KEY|STORAGE_KEY/);
       }
     }
   });
 });
 
 // ------------------------------------------------------------------ reset
-describe('RESET ENTIRE EXPERIENCE (this device)', () => {
+describe('RESET ENTIRE EXPERIENCE (this browser/device only)', () => {
+  it('is opened only by visiting the site with ?reset', () => {
+    expect(wantsReset('?reset')).toBe(true);
+    expect(wantsReset('?reset=1')).toBe(true);
+    expect(wantsReset('?stage=princess&reset')).toBe(true);
+    expect(wantsReset('')).toBe(false);
+    expect(wantsReset('?stage=princess')).toBe(false);
+  });
+
   it('clears every prism: key in local and session storage – and nothing else', () => {
     const { local, session } = usedBrowser();
     const removed = clearVisitorProgress([local, session]);
-    expect(removed.sort()).toEqual(['prism:bouquet', 'prism:garden-secrets', 'prism:reached25', 'prism:sound', 'prism:star-entrance:v1']);
+    expect(removed.sort()).toEqual(['prism:bouquet', 'prism:garden-secrets', 'prism:reached25', 'prism:sound', 'prism:star-entrance:v1', 'prism:star-wish']);
     expect(local.keys()).toEqual(['unrelated-site-key']);
     expect(session.keys()).toEqual([]);
     expect(visitorKeys([local, session])).toEqual([]);
@@ -98,46 +106,18 @@ describe('RESET ENTIRE EXPERIENCE (this device)', () => {
     expect(local.getItem(BOUQUET_KEY)).toBeNull();
   });
 
-  it('never stores wishes in the browser, so a reset cannot touch them', () => {
-    for (const s of sources) expect(s).not.toMatch(/setItem\([^)]*wish/i);
-  });
-});
-
-describe('RESET ENTIRE EXPERIENCE (every device, via the server epoch)', () => {
-  it('another device with old progress clears it and restarts when the epoch changed', async () => {
+  it('clears the wish kept for the Royal Seal certificate', () => {
     const { local, session } = usedBrowser();
-    local.setItem(EXPERIENCE_EPOCH_KEY, 'epoch-1');
-    const r = await syncExperienceEpoch({ endpoint: '/api/experience', fetchImpl: epochResponse('epoch-2'), local, storages: [local, session] });
-    expect(r).toBe('reset');
-    expect(local.getItem(ENTRANCE_SEEN_KEY)).toBeNull();
-    expect(local.getItem(BOUQUET_KEY)).toBeNull();
-    expect(session.getItem('prism:garden-secrets')).toBeNull();
-    expect(local.getItem(EXPERIENCE_EPOCH_KEY)).toBe('epoch-2');
-    // the next visit is ordinary
-    expect(await syncExperienceEpoch({ endpoint: '/api/experience', fetchImpl: epochResponse('epoch-2'), local, storages: [local, session] })).toBe('same');
+    expect(loadStarWish(session)).toBe('To see the northern lights');
+    clearVisitorProgress([local, session]);
+    expect(loadStarWish(session)).toBeNull();
+    // and a new wish can be made afterwards as usual
+    saveStarWish('A new wish', session);
+    expect(loadStarWish(session)).toBe('A new wish');
   });
 
-  it('a device that saw no marker before but has progress also starts fresh', async () => {
-    const { local, session } = usedBrowser();
-    expect(await syncExperienceEpoch({ endpoint: '/x', fetchImpl: epochResponse('e1'), local, storages: [local, session] })).toBe('reset');
-    expect(local.getItem(ENTRANCE_SEEN_KEY)).toBeNull();
-  });
-
-  it('a brand-new visitor is not reloaded (only the sound preference exists)', async () => {
-    const local = new MemoryStorage();
-    local.setItem('prism:sound', 'on');
-    expect(await syncExperienceEpoch({ endpoint: '/x', fetchImpl: epochResponse('e1'), local, storages: [local] })).toBe('first-visit');
-    expect(local.getItem('prism:sound')).toBe('on');
-    expect(local.getItem(EXPERIENCE_EPOCH_KEY)).toBe('e1');
-  });
-
-  it('does nothing when no reset ever happened, the server is unreachable, or there is no backend', async () => {
-    const { local, session } = usedBrowser();
-    const before = local.keys().length;
-    expect(await syncExperienceEpoch({ endpoint: '/x', fetchImpl: epochResponse(null), local, storages: [local, session] })).toBe('unavailable');
-    const offline = vi.fn().mockRejectedValue(new TypeError('offline')) as unknown as typeof fetch;
-    expect(await syncExperienceEpoch({ endpoint: '/x', fetchImpl: offline, local, storages: [local, session] })).toBe('unavailable');
-    expect(await syncExperienceEpoch({ endpoint: null, local, storages: [local, session] })).toBe('not-connected');
-    expect(local.keys().length).toBe(before);
+  it('works without any backend, database or network request', () => {
+    const src = readFileSync(new URL('./experienceState.ts', import.meta.url), 'utf8');
+    expect(src).not.toMatch(/fetch\(|epoch|\/api\//i);
   });
 });

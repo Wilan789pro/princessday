@@ -6,25 +6,14 @@ import { MONTHS, PRINCESS_DAY_MS, WEEKDAYS, calendarDaysBetween, pad2 } from '..
 import { getZonedParts } from '../../utils/timezone';
 import { Crystal } from '../Crystal/Crystal';
 import { useSound } from '../../audio/SoundContext';
-import { useRef } from 'react';
-import { registerTap } from '../../utils/secretTaps';
 import './IntroClock.css';
 
 interface Props {
   onBegin: () => void;
   onSkip?: () => void;
-  /** Hidden: five quick taps on the sapphire. */
-  onSecret?: () => void;
 }
 
-export function IntroClock({ onBegin, onSkip, onSecret }: Props) {
-  const taps = useRef<number[]>([]);
-  const tapSapphire = () => {
-    if (!onSecret) return;
-    const r = registerTap(taps.current, performance.now());
-    taps.current = r.times;
-    if (r.unlocked) onSecret();
-  };
+export function IntroClock({ onBegin, onSkip }: Props) {
   const nowMs = useCurrentTime();
   const reduced = useReducedMotion();
   const { enabled } = useSound();
@@ -40,7 +29,7 @@ export function IntroClock({ onBegin, onSkip, onSecret }: Props) {
 
   return (
     <section className="scene intro" aria-labelledby="intro-time">
-      <motion.div className="intro__crystal" {...fade(0.2)} onPointerUp={tapSapphire}>
+      <motion.div className="intro__crystal" {...fade(0.2)}>
         <div className="intro__halo" />
         <Crystal hue="sapphire" shape={0} size="clamp(92px, 26vw, 130px)" float />
       </motion.div>

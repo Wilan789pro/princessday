@@ -1,7 +1,9 @@
 /**
  * CERTIFICATE OF EXTRAORDINARY PRINCESSHOOD – drawn from scratch on a Canvas
  * (A4 portrait at 300 DPI: 2480 × 3508). Not a screenshot. Rendered locally.
- * The floral stamp is rendered from the saved bouquet specification.
+ * The floral stamp is rendered from the saved bouquet specification, and her
+ * wish (if she made one) gets its own section. Without a wish the layout is
+ * the original one, with no empty space.
  */
 import { garden } from '../content/garden';
 import { bouquetForCertificate, type BouquetSpec } from './bouquetModel';
@@ -70,6 +72,205 @@ function wrap(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): st
   }
   if (line) lines.push(line);
   return lines;
+}
+
+// ---------------------------------------------------------------- her wish
+/** Measures a string in a CSS font, e.g. (`italic 500 60px …`, 'text') → px. */
+export type Measure = (font: string, text: string) => number;
+
+export const wishFont = (px: number) => `italic 500 ${px}px ${SERIF}`;
+
+export interface WishLayoutOptions {
+  maxWidth: number;
+  maxHeight: number;
+  maxPx: number;
+  minPx: number;
+}
+
+export interface WishLayout {
+  size: number;
+  lineHeight: number;
+  /** '' marks a paragraph break (drawn as half a line). */
+  lines: string[];
+  height: number;
+  truncated: boolean;
+}
+
+export const WISH_TEXT_BOX: WishLayoutOptions = { maxWidth: 1700, maxHeight: 440, maxPx: 72, minPx: 40 };
+
+/** Her words in curly quotes – part of the text, so they wrap with it. */
+export const quoted = (wish: string) => `“${wish.trim()}”`;
+
+/** Her paragraphs as she wrote them: line breaks kept, runs of blank lines folded into one. */
+export function wishParagraphs(text: string): string[] {
+  const out: string[] = [];
+  for (const raw of text.replace(/\r\n?/g, '\n').split('\n')) {
+    const p = raw.replace(/\s+/g, ' ').trim();
+    if (p || (out.length && out[out.length - 1] !== '')) out.push(p);
+  }
+  while (out.length && out[out.length - 1] === '') out.pop();
+  return out;
+}
+
+/** Word wrap that also breaks a single word too long for the line (URLs, emoji runs…). */
+export function wrapToWidth(text: string, width: (s: string) => number, maxWidth: number): string[] {
+  const lines: string[] = [];
+  let line = '';
+  for (const word of text.split(' ').filter(Boolean)) {
+    const test = line ? `${line} ${word}` : word;
+    if (width(test) <= maxWidth) {
+      line = test;
+      continue;
+    }
+    if (line) lines.push(line);
+    line = '';
+    if (width(word) <= maxWidth) {
+      line = word;
+      continue;
+    }
+    for (const ch of Array.from(word)) {
+      if (line && width(line + ch) > maxWidth) {
+        lines.push(line);
+        line = '';
+      }
+      line += ch;
+    }
+  }
+  if (line) lines.push(line);
+  return lines;
+}
+
+const blockHeight = (lines: string[], lh: number) => lines.reduce((h, l) => h + (l ? lh : lh * 0.5), 0);
+
+/**
+ * Chooses the largest size at which the whole wish fits the box. A 500-character
+ * wish always fits; only pathological input (hundreds of line breaks) is
+ * shortened, with an ellipsis, so nothing ever leaves the certificate.
+ */
+export function layoutWish(text: string, measure: Measure, o: WishLayoutOptions = WISH_TEXT_BOX): WishLayout {
+  const paras = wishParagraphs(text);
+  let lines: string[] = [];
+  let lh = 0;
+  for (let size = o.maxPx; size >= o.minPx; size -= 2) {
+    const font = wishFont(size);
+    lh = Math.round(size * 1.34);
+    lines = paras.flatMap((p) => (p ? wrapToWidth(p, (t) => measure(font, t), o.maxWidth) : ['']));
+    const height = blockHeight(lines, lh);
+    if (height <= o.maxHeight) return { size, lineHeight: lh, lines, height, truncated: false };
+  }
+  const size = o.minPx;
+  const font = wishFont(size);
+  const kept: string[] = [];
+  for (const l of lines) {
+    if (blockHeight([...kept, l || 'x'], lh) > o.maxHeight) break;
+    kept.push(l);
+  }
+  while (kept.length && kept[kept.length - 1] === '') kept.pop();
+  let last = (kept.pop() ?? '').trimEnd();
+  while (last && measure(font, `${last}…`) > o.maxWidth) last = Array.from(last).slice(0, -1).join('').trimEnd();
+  kept.push(`${last}…`);
+  return { size, lineHeight: lh, lines: kept, height: blockHeight(kept, lh), truncated: true };
+}
+
+/** Where everything sits. Without a wish: the original certificate, unchanged. */
+export interface CertificateLayout {
+  awardedY: number;
+  nameY: number;
+  nameDividerY: number;
+  citationY: number;
+  citationLineHeight: number;
+  dateY: number;
+  /** The wish panel (only with a wish). */
+  wishPanel: { x: number; y: number; w: number; h: number } | null;
+  stamp: { x: number; y: number; scale: number };
+  seal: { x: number; y: number; scale: number };
+}
+
+export const DEFAULT_LAYOUT: CertificateLayout = {
+  awardedY: 1230,
+  nameY: 1420,
+  nameDividerY: 1510,
+  citationY: 1680,
+  citationLineHeight: 104,
+  dateY: 2060,
+  wishPanel: null,
+  stamp: { x: 790, y: 2560, scale: 1 },
+  seal: { x: 1700, y: 2540, scale: 1 },
+};
+
+export const WISH_LAYOUT: CertificateLayout = {
+  awardedY: 1175,
+  nameY: 1355,
+  nameDividerY: 1440,
+  citationY: 1590,
+  citationLineHeight: 100,
+  dateY: 1830,
+  wishPanel: { x: 300, y: 1900, w: CERT_W - 600, h: 640 },
+  stamp: { x: 770, y: 2810, scale: 0.72 },
+  seal: { x: 1810, y: 2770, scale: 0.76 },
+};
+
+export function certificateLayout(wish: string | null | undefined): CertificateLayout {
+  return wish && wishParagraphs(wish).length ? WISH_LAYOUT : DEFAULT_LAYOUT;
+}
+
+function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+
+function drawWish(ctx: CanvasRenderingContext2D, wish: string, panel: NonNullable<CertificateLayout['wishPanel']>) {
+  const cx = panel.x + panel.w / 2;
+  ctx.save();
+  // soft sapphire-tinted panel with a hairline silver border
+  roundRect(ctx, panel.x, panel.y, panel.w, panel.h, 48);
+  const bg = ctx.createLinearGradient(0, panel.y, 0, panel.y + panel.h);
+  bg.addColorStop(0, 'rgba(31,95,191,0.07)');
+  bg.addColorStop(1, 'rgba(31,95,191,0.03)');
+  ctx.fillStyle = bg;
+  ctx.fill();
+  ctx.strokeStyle = SILVER;
+  ctx.lineWidth = 3;
+  ctx.stroke();
+
+  // heading, flanked by small gems
+  const headingY = panel.y + 92;
+  ctx.fillStyle = INK_SOFT;
+  ctx.font = `600 38px ${SANS}`;
+  drawSpaced(ctx, garden.certificate.wishHeading, cx, headingY, 14);
+  const half = spacedWidth(ctx, garden.certificate.wishHeading, 14) / 2;
+  diamond(ctx, cx - half - 50, headingY - 13, 12, INK);
+  diamond(ctx, cx + half + 50, headingY - 13, 12, INK);
+
+  // her words, in quotes, centred in the space under the heading
+  const L = layoutWish(quoted(wish), (font, t) => {
+    ctx.font = font;
+    return ctx.measureText(t).width;
+  });
+  const top = headingY + 50;
+  const bottom = panel.y + panel.h - 50;
+  let y = top + (bottom - top - L.height) / 2 + L.size * 0.92;
+  ctx.font = wishFont(L.size);
+  ctx.fillStyle = '#1b3561';
+  for (const line of L.lines) {
+    if (line) ctx.fillText(line, cx, y);
+    y += line ? L.lineHeight : L.lineHeight * 0.5;
+  }
+  ctx.restore();
+}
+
+/** Draws fn at (x, y), scaled by k around that point. */
+function scaled(ctx: CanvasRenderingContext2D, x: number, y: number, k: number, fn: () => void) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(k, k);
+  fn();
+  ctx.restore();
 }
 
 // ---------------------------------------------------------------- ornaments
@@ -314,7 +515,8 @@ function waxSeal(ctx: CanvasRenderingContext2D, cx: number, cy: number, r: numbe
 }
 
 // ---------------------------------------------------------------- main
-export function drawCertificate(ctx: CanvasRenderingContext2D, bouquet: HTMLImageElement) {
+export function drawCertificate(ctx: CanvasRenderingContext2D, bouquet: HTMLImageElement, wish: string | null = null) {
+  const L = certificateLayout(wish);
   const W = CERT_W;
   const H = CERT_H;
   const cx = W / 2;
@@ -389,26 +591,29 @@ export function drawCertificate(ctx: CanvasRenderingContext2D, bouquet: HTMLImag
   // recipient
   ctx.fillStyle = INK_SOFT;
   ctx.font = `italic 500 84px ${SERIF}`;
-  ctx.fillText(c.awardedTo, cx, 1230);
+  ctx.fillText(c.awardedTo, cx, L.awardedY);
   const nameFont = (px: number) => `600 ${px}px ${SERIF}`;
   const nSize = fitFont(ctx, c.name, nameFont, 150, 1900);
   ctx.font = nameFont(nSize);
   ctx.fillStyle = INK;
-  ctx.fillText(c.name, cx, 1420);
-  divider(ctx, cx, 1510, 460);
+  ctx.fillText(c.name, cx, L.nameY);
+  divider(ctx, cx, L.nameDividerY, 460);
 
   // citation
   ctx.font = `italic 500 76px ${SERIF}`;
   ctx.fillStyle = '#26395a';
-  wrap(ctx, c.citation, 1700).forEach((line, i) => ctx.fillText(line, cx, 1680 + i * 104));
+  wrap(ctx, c.citation, 1700).forEach((line, i) => ctx.fillText(line, cx, L.citationY + i * L.citationLineHeight));
 
   ctx.font = `italic 500 58px ${SERIF}`;
   ctx.fillStyle = INK_SOFT;
-  ctx.fillText(c.dateLine, cx, 2060);
+  ctx.fillText(c.dateLine, cx, L.dateY);
+
+  // her wish
+  if (wish && L.wishPanel) drawWish(ctx, wish, L.wishPanel);
 
   // stamp + seal
-  floralStamp(ctx, bouquet, 790, 2560, 330);
-  waxSeal(ctx, 1700, 2540, 270);
+  scaled(ctx, L.stamp.x, L.stamp.y, L.stamp.scale, () => floralStamp(ctx, bouquet, 0, 0, 330));
+  scaled(ctx, L.seal.x, L.seal.y, L.seal.scale, () => waxSeal(ctx, 0, 0, 270));
 
   // signature
   ctx.strokeStyle = SILVER;
@@ -426,7 +631,7 @@ export function drawCertificate(ctx: CanvasRenderingContext2D, bouquet: HTMLImag
 }
 
 /** Renders the full-resolution certificate and returns it as a PNG Blob. */
-export async function renderCertificatePng(spec: BouquetSpec | null): Promise<Blob> {
+export async function renderCertificatePng(spec: BouquetSpec | null, wish: string | null = null): Promise<Blob> {
   await ensureCertificateFonts();
   const bouquet = await loadSvgImage(certificateStampMarkup(spec));
   const canvas = document.createElement('canvas');
@@ -434,7 +639,7 @@ export async function renderCertificatePng(spec: BouquetSpec | null): Promise<Bl
   canvas.height = CERT_H;
   const ctx = canvas.getContext('2d');
   if (!ctx) throw new Error('Canvas is not available.');
-  drawCertificate(ctx, bouquet);
+  drawCertificate(ctx, bouquet, wish);
   const blob = await canvasToBlob(canvas);
   canvas.width = canvas.height = 0;
   return blob;

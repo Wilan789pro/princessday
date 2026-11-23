@@ -1,5 +1,4 @@
 import { AnimatePresence, motion, type MotionProps } from 'framer-motion';
-import { Suspense, lazy } from 'react';
 import { useCallback, useEffect, useState } from 'react';
 import { audio } from './audio/AudioEngine';
 import { useSound } from './audio/SoundContext';
@@ -11,16 +10,13 @@ import { IntroClock } from './components/IntroClock/IntroClock';
 import { OneMoreThing } from './components/OneMoreThing/OneMoreThing';
 import { PrincessDay } from './components/PrincessDay/PrincessDay';
 import { Project25 } from './components/Project25/Project25';
+import { ResetExperience } from './components/ResetExperience/ResetExperience';
 import { Starfield, type StarMode } from './components/Starfield/Starfield';
 import { TimeRewind } from './components/TimeRewind/TimeRewind';
 import { TEST_CLOCK_ENABLED, now, syncWithServer } from './utils/clock';
 import { BIRTHDAY_MS } from './utils/dates';
 import { chooseEntrance } from './utils/cinematic';
-import { startUrl, syncExperienceEpoch } from './utils/experienceState';
-import { EXPERIENCE_ENDPOINT } from './utils/hosting';
-
-/** The owner's vault is a separate chunk, downloaded only after the secret gesture. */
-const RoyalWishVault = lazy(() => import('./components/Vault/RoyalWishVault'));
+import { wantsReset } from './utils/experienceState';
 
 const STAGES = ['intro', 'rewind', 'arrival', 'princess', 'oneMore', 'dates', 'project25'] as const;
 type Stage = (typeof STAGES)[number];
@@ -58,19 +54,22 @@ export default function App() {
   const [stage, setStage] = useState<Stage>(initialStage);
   const [gold, setGold] = useState(false);
   const [starsDimmed, setStarsDimmed] = useState(false);
-  const [vaultOpen, setVaultOpen] = useState(false);
+  /** RESET ENTIRE EXPERIENCE: opened only by visiting the site with ?reset. */
+  const [resetOpen, setResetOpen] = useState(() => wantsReset(window.location.search));
   /** Presentation only: whether THE 25th STAR plays its one-time entrance. */
   const [starEntrance, setStarEntrance] = useState<'cinematic' | 'none'>(() => chooseEntrance());
   const { enabled } = useSound();
 
   useEffect(() => {
     void syncWithServer();
-    // RESET ENTIRE EXPERIENCE reaches every device: if the owner reset the
-    // experience since this browser's last visit, its progress is cleared and
-    // the story restarts from the very beginning.
-    void syncExperienceEpoch({ endpoint: EXPERIENCE_ENDPOINT }).then((r) => {
-      if (r === 'reset') window.location.replace(startUrl());
-    });
+  }, []);
+
+  const closeReset = useCallback(() => {
+    // Cancelled: drop ?reset from the address and carry on as normal.
+    const url = new URL(window.location.href);
+    url.searchParams.delete('reset');
+    window.history.replaceState(null, '', url.pathname + url.search + url.hash);
+    setResetOpen(false);
   }, []);
 
   useEffect(() => {
@@ -132,7 +131,7 @@ export default function App() {
       <div className="app">
         <AnimatePresence mode="wait">
           <motion.div key={stage} initial={m.initial} animate={m.animate} exit={m.exit} transition={{ duration: 0.8 }}>
-            {stage === 'intro' && <IntroClock onBegin={begin} onSkip={canSkip ? skip : undefined} onSecret={() => setVaultOpen(true)} />}
+            {stage === 'intro' && <IntroClock onBegin={begin} onSkip={canSkip ? skip : undefined} />}
             {stage === 'rewind' && <TimeRewind onComplete={() => setStage('arrival')} />}
             {stage === 'arrival' && <Arrival onContinue={() => setStage('princess')} />}
             {stage === 'princess' && <PrincessDay onComplete={() => setStage('oneMore')} />}
@@ -143,11 +142,7 @@ export default function App() {
         </AnimatePresence>
       </div>
 
-      {vaultOpen && (
-        <Suspense fallback={null}>
-          <RoyalWishVault onClose={() => setVaultOpen(false)} />
-        </Suspense>
-      )}
+      {resetOpen && <ResetExperience onClose={closeReset} />}
 
       {TEST_CLOCK_ENABLED && <DevPanel />}
     </>

@@ -2,6 +2,7 @@ import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { useEffect, useRef, useState } from 'react';
 import { garden } from '../../content/garden';
 import { emptyBouquet, loadBouquet, saveBouquet, type BouquetSpec } from '../../garden/bouquetModel';
+import { loadStarWish, saveStarWish } from '../../garden/starWish';
 import { Reveal } from '../PrincessDay/Reveal';
 import { BouquetStudio } from './BouquetStudio';
 import { FirstBloom } from './FirstBloom';
@@ -16,20 +17,27 @@ interface Props {
 
 /**
  * CHAPTER IV of Princess Day – THE GARDEN OF WISHES.
- * Four chapters in one continuous scene. Holds the bouquet specification,
- * which is saved only in this browser and reused by the certificate.
+ * Four chapters in one continuous scene. Holds the bouquet specification
+ * (saved in this browser) and her wish (kept for this visit), both of which
+ * end up on the Royal Seal certificate. Nothing is sent anywhere.
  */
 export function GardenOfWishes({ onReturn }: Props) {
   const reduced = useReducedMotion();
   const [chapter, setChapter] = useState(0);
   const [reached, setReached] = useState(0);
   const [spec, setSpec] = useState<BouquetSpec>(() => loadBouquet() ?? emptyBouquet());
+  const [wish, setWish] = useState<string | null>(() => loadStarWish());
   const stepsRef = useRef<HTMLElement>(null);
   const firstRender = useRef(true);
 
   useEffect(() => {
     saveBouquet(spec);
   }, [spec]);
+
+  const keepWish = (w: string | null) => {
+    setWish(w);
+    saveStarWish(w);
+  };
 
   useEffect(() => {
     if (firstRender.current) {
@@ -94,8 +102,8 @@ export function GardenOfWishes({ onReturn }: Props) {
             </p>
             {chapterId === 'bloom' && <FirstBloom onContinue={next} />}
             {chapterId === 'bouquet' && <BouquetStudio spec={spec} onChange={setSpec} onContinue={next} />}
-            {chapterId === 'wish' && <WishUponAStar onContinue={next} />}
-            {chapterId === 'seal' && <RoyalCertificate spec={spec} onReturn={onReturn} />}
+            {chapterId === 'wish' && <WishUponAStar onContinue={next} onWish={keepWish} />}
+            {chapterId === 'seal' && <RoyalCertificate spec={spec} wish={wish} onReturn={onReturn} />}
           </motion.div>
         </AnimatePresence>
       </div>

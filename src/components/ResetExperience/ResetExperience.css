@@ -1,0 +1,67 @@
+/* RESET ENTIRE EXPERIENCE – sapphire & gold confirmation dialog (opened with ?reset) */
+.reset {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: grid;
+  place-items: center;
+  padding: calc(var(--safe-top) + 20px) calc(var(--safe-right) + 20px) calc(var(--safe-bottom) + 20px) calc(var(--safe-left) + 20px);
+  background: rgba(2, 7, 16, 0.82);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+}
+
+.reset__dialog {
+  width: min(100%, 480px);
+  padding: 24px 22px 22px;
+  border-radius: 20px;
+  color: var(--text);
+  background:
+    radial-gradient(120% 60% at 50% 0%, rgba(57, 139, 255, 0.18), transparent 60%),
+    linear-gradient(180deg, #102a52, #0a1d3a);
+  border: 1px solid rgba(242, 198, 109, 0.5);
+  box-shadow:
+    0 30px 80px -20px rgba(0, 0, 0, 0.9),
+    0 0 60px -30px rgba(242, 198, 109, 0.5);
+}
+
+.reset__eyebrow {
+  margin: 0 0 6px;
+  font-size: 11px;
+  letter-spacing: 0.24em;
+  color: var(--c-gold);
+}
+
+.reset__title {
+  margin: 0 0 12px;
+  font-size: 26px;
+  color: #fff;
+}
+
+.reset__body {
+  margin: 0 0 20px;
+  font-size: 15px;
+  line-height: 1.55;
+}
+
+.reset__done {
+  margin: 4px 0 6px;
+  font-size: 20px;
+  font-style: italic;
+  line-height: 1.4;
+  color: var(--c-gold);
+}
+
+.reset__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.reset__confirm {
+  color: #2a1a00;
+  letter-spacing: 0.06em;
+  background: linear-gradient(135deg, #fff1c9, var(--c-gold) 55%, #c98f32);
+  box-shadow: 0 10px 30px -10px rgba(242, 198, 109, 0.6);
+}

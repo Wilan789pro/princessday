@@ -597,14 +597,6 @@
   box-shadow: 0 0 0 3px rgba(102, 229, 245, 0.25);
 }
 
-.wish__hp {
-  position: absolute;
-  left: -10000px;
-  width: 1px;
-  height: 1px;
-  opacity: 0;
-}
-
 .wish__meta {
   display: flex;
   justify-content: flex-end;

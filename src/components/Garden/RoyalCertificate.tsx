@@ -12,11 +12,13 @@ type Phase = 'forming' | 'ready' | 'pressed' | 'revealed' | 'error';
 
 interface Props {
   spec: BouquetSpec;
+  /** Her wish from A Wish Upon a Star, written on the certificate (null = none). */
+  wish: string | null;
   onReturn: () => void;
 }
 
 /** CHAPTER V – the seal forms, she presses it, the certificate appears. */
-export function RoyalCertificate({ spec, onReturn }: Props) {
+export function RoyalCertificate({ spec, wish, onReturn }: Props) {
   const s = garden.seal;
   const reduced = !!useReducedMotion();
   const [phase, setPhase] = useState<Phase>('forming');
@@ -44,7 +46,7 @@ export function RoyalCertificate({ spec, onReturn }: Props) {
     setTimeout(() => audio.chime(5), 140);
     const minDelay = new Promise((r) => setTimeout(r, reduced ? 100 : 1100));
     try {
-      const [blob] = await Promise.all([renderCertificatePng(spec), minDelay]);
+      const [blob] = await Promise.all([renderCertificatePng(spec, wish), minDelay]);
       blobRef.current = blob;
       const u = URL.createObjectURL(blob);
       urlRef.current = u;
@@ -138,7 +140,7 @@ export function RoyalCertificate({ spec, onReturn }: Props) {
             <div className="seal__frame">
               <img
                 src={url ?? ''}
-                alt={`${garden.certificate.titleTop} ${garden.certificate.titleMain}, awarded to ${garden.certificate.name}. ${garden.certificate.citation} Sealed with a sapphire seal and stamped with her bouquet.`}
+                alt={`${garden.certificate.titleTop} ${garden.certificate.titleMain}, awarded to ${garden.certificate.name}. ${garden.certificate.citation} ${wish ? `Her wish upon a star: “${wish}”. ` : ''}Sealed with a sapphire seal and stamped with her bouquet.`}
               />
             </div>
             <div className="garden__actions">
