@@ -2,7 +2,7 @@ import { TIMEZONE, getZonedParts, zonedTimeToUtc, type ZonedParts } from './time
 
 /** Wednesday 18 November 2026, 00:00:00 Mauritius – destination of the rewind. */
 export const PRINCESS_DAY_MS = zonedTimeToUtc(2026, 11, 18, 0, 0, 0);
-/** Friday 18 December 2026, 00:00:00 Mauritius – Project 25 unlock moment. */
+/** Friday 18 December 2026, 00:00:00 Mauritius – THE 25th STAR unlock moment. */
 export const BIRTHDAY_MS = zonedTimeToUtc(2026, 12, 18, 0, 0, 0);
 
 export const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];

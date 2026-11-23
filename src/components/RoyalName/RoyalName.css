@@ -1,0 +1,20 @@
+.royal-name {
+  display: inline;
+}
+
+/* emoji group + its neighbouring word never separate across a line break */
+.royal-name__group {
+  white-space: nowrap;
+}
+
+.royal-name__emoji {
+  display: inline-block;
+  font-style: normal;
+  font-size: 0.6em;
+  letter-spacing: 0;
+  vertical-align: 0.18em;
+  /* never inherit gradient-text transparency */
+  -webkit-text-fill-color: initial;
+  color: initial;
+  background: none;
+}

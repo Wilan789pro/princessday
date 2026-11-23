@@ -7,6 +7,8 @@
  * The Garden of Wishes (Chapter IV) has its own content file: src/content/garden.ts
  */
 
+import { ROYAL_NAME } from './royal';
+
 export type CrystalHue = 'sapphire' | 'ice' | 'cyan' | 'lavender' | 'silver';
 
 export interface CrystalContent {
@@ -21,8 +23,8 @@ export interface CrystalContent {
 export const princessDay = {
   intro: {
     eyebrow: 'Wednesday · 18 November 2026',
-    title: 'Happy Princess Day',
-    name: 'Princess Prism',
+    title: 'Happy Princess Day,',
+    /* the name itself is rendered from ROYAL_NAME (src/content/royal.ts) */
     body: 'An official celebration, slightly late, entirely deserved. Explore at your own royal pace.', // PLACEHOLDER
     scrollHint: 'Scroll to begin',
   },
@@ -64,7 +66,7 @@ export const princessDay = {
     title: 'Royal Decree',
     preamble: 'By order of the Celestial Court of Sapphire, on this Eighteenth day of November:', // PLACEHOLDER
     articles: [
-      'Article I — Princess Prism shall be exempt from all tasks officially deemed boring.',
+      `Article I — ${ROYAL_NAME} shall be exempt from all tasks officially deemed boring.`,
       'Article II — Any disagreement today shall be automatically settled in her favour.',
       'Article III — Dessert is mandatory. Seconds are encouraged.',
       'Article IV — Compliments received today may not be argued with.',
@@ -83,7 +85,7 @@ export const princessDay = {
   ],
 
   closing: {
-    title: 'Happy Princess Day, Princess Prism.',
+    title: `Happy Princess Day, ${ROYAL_NAME}.`,
     body: '[Placeholder] Thank you for letting the universe rewind for you. It does not do that for just anyone.',
     secretsLabel: (found: number, total: number) => `Secrets found: ${found} / ${total}`,
     continueLabel: 'End the celebration',

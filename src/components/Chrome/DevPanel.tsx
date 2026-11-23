@@ -14,12 +14,12 @@ import './DevPanel.css';
 const PRESETS: { label: string; now?: string; stage?: string }[] = [
   { label: 'Real time · intro' },
   { label: '22 Nov (4 days after)', now: '2026-11-22T21:30:00+04:00' },
-  { label: '10 s before birthday → P25', now: '2026-12-17T23:59:50+04:00', stage: 'project25' },
-  { label: 'After birthday → P25', now: '2026-12-18T09:00:00+04:00', stage: 'project25' },
+  { label: '10 s before birthday → 25th Star', now: '2026-12-17T23:59:50+04:00', stage: 'project25' },
+  { label: 'After birthday → 25th Star', now: '2026-12-18T09:00:00+04:00', stage: 'project25' },
   { label: 'Jump: Princess Day', stage: 'princess' },
   { label: 'Jump: One More Thing', stage: 'oneMore' },
   { label: 'Jump: Dates', stage: 'dates' },
-  { label: 'Jump: Project 25', stage: 'project25' },
+  { label: 'Jump: THE 25th STAR', stage: 'project25' },
 ];
 
 function hrefFor(p: { now?: string; stage?: string }) {

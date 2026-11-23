@@ -3,9 +3,12 @@
  * Edit freely; nothing here is secret.
  */
 import { numberWord } from '../utils/dates';
+import { ROYAL_NAME } from './royal';
 
 export const experience = {
-  heroName: 'Princess Prism',
+  heroName: ROYAL_NAME,
+  /** Visible name of the birthday countdown experience. */
+  starName: 'THE 25th STAR',
 
   intro: {
     eyebrow: 'Local time · Port Louis',
@@ -19,7 +22,7 @@ export const experience = {
     },
     lineThree: 'And it was not properly celebrated. That needs fixing.',
     beginLabel: 'Begin the experience',
-    skipLabel: 'Skip to Project 25',
+    skipLabel: 'Skip to THE 25th STAR',
     soundHint: 'Best with sound on',
   },
 
@@ -47,8 +50,8 @@ export const experience = {
 
   dates: {
     left: { day: '18', month: 'November', label: 'Princess Day' },
-    right: { day: '18', month: 'December', label: "Princess Prism's Birthday" },
+    right: { day: '18', month: 'December', label: `The Birthday of ${ROYAL_NAME}` },
     tagline: 'THE UNIVERSE HAS GREAT TASTE.', // keep this line exactly
-    continueLabel: 'Open Project 25',
+    continueLabel: 'Follow THE 25th STAR',
   },
 };

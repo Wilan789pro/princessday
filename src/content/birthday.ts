@@ -1,26 +1,32 @@
 /**
- * PROJECT 25 – PUBLIC PRESENTATION TEXT ONLY
- * ------------------------------------------
+ * THE 25th STAR – PUBLIC PRESENTATION TEXT ONLY
+ * ---------------------------------------------
+ * (Internal identifiers keep the historical name `project25` for compatibility.)
  * This file ships in the public bundle, so it must contain NOTHING secret.
  * The real birthday message/content lives in server/birthday-content.json
  * and is only delivered by /api/birthday after 18.12.2026 00:00 (Mauritius).
  */
 
+import { ROYAL_NAME } from './royal';
+
 export const project25 = {
-  name: 'PROJECT 25',
-  destination: 'DESTINATION: 18.12.2026',
-  accessStatus: 'ACCESS STATUS: RESTRICTED',
-  classification: 'CLASSIFICATION: PRINCESS PRISM ONLY',
-  timezoneNote: 'T-ZERO · 00:00:00 · PORT LOUIS (UTC+4)',
+  name: 'THE 25th STAR',
+  eyebrow: 'STAR № 25',
+  destination: 'RISES ON 18.12.2026',
+  accessStatus: 'STILL BELOW THE HORIZON',
+  accessStatusReached: 'THE STAR HAS RISEN',
+  classification: `RESERVED FOR ${ROYAL_NAME}`,
+  timezoneNote: 'MIDNIGHT · 00:00:00 · PORT LOUIS (UTC+4)',
 
   /** Rotating status ticker. */
   statusMessages: [
-    'PROJECT INITIALISED.',
-    'PREPARATIONS UNDERWAY.',
-    'CRYSTAL MATRIX STABLE.',
-    'FINAL CALIBRATION.',
-    'BIRTHDAY TRANSMISSION APPROACHING.',
+    'CHARTING THE NIGHT SKY.',
+    'TWENTY-FOUR STARS ALREADY IN PLACE.',
+    'POLISHING THE STARLIGHT.',
+    'FINAL ALIGNMENT.',
+    'THE 25th STAR IS APPROACHING.',
   ],
+  statusReached: 'THE 25th STAR HAS RISEN.',
   statusIntervalMs: 5200,
 
   chamber: {
@@ -37,8 +43,10 @@ export const project25 = {
   },
 
   unlocked: {
-    lines: ['PROJECT 25', 'ACCESS GRANTED', 'LEVEL 25 UNLOCKED'],
-    headline: 'HAPPY 25TH BIRTHDAY, PRINCESS PRISM!',
+    lines: ['THE 25th STAR', 'ACCESS GRANTED', 'LEVEL 25 UNLOCKED'],
+    /** Followed by the royal name (rendered from ROYAL_NAME) and headlineEnd. */
+    headlineStart: 'Happy 25th Birthday,',
+    headlineEnd: '!',
   },
 
   reveal: {

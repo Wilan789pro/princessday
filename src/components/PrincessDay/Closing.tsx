@@ -2,6 +2,7 @@ import { ArrowRight } from 'lucide-react';
 import { princessDay } from '../../content/princessDay';
 import { Crystal } from '../Crystal/Crystal';
 import { Reveal } from './Reveal';
+import { WithRoyalName } from '../RoyalName/RoyalName';
 
 interface Props {
   secretsFound: number;
@@ -20,7 +21,7 @@ export function Closing({ secretsFound, secretsTotal, onContinue }: Props) {
           <Crystal hue="lavender" shape={1} size={42} float sparkle={false} />
         </div>
         <h2 id="closing-title" className="closing__title serif">
-          {t.title}
+          <WithRoyalName text={t.title} />
         </h2>
         <p className="closing__body">{t.body}</p>
         <p className="closing__secrets mono">{t.secretsLabel(secretsFound, secretsTotal)}</p>

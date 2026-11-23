@@ -50,7 +50,8 @@
 
 .pc-title {
   margin: 8px 0 14px;
-  font-size: clamp(34px, 11vw, 84px);
+  /* 13 mono characters: sized so it fits a 360px phone on one line */
+  font-size: clamp(26px, 8.2vw, 76px);
   font-weight: 700;
   letter-spacing: 0.1em;
   padding-left: 0.1em;
@@ -75,7 +76,7 @@
 }
 
 .pc-meta--warn {
-  color: #ff9f9f;
+  color: var(--c-lavender);
 }
 
 .pc-meta--warn::before {
@@ -85,8 +86,8 @@
   height: 6px;
   margin-right: 8px;
   border-radius: 50%;
-  background: #ff6b6b;
-  box-shadow: 0 0 8px #ff6b6b;
+  background: var(--c-lavender);
+  box-shadow: 0 0 8px var(--c-lavender);
   vertical-align: middle;
   animation: caret 1.4s steps(1) infinite;
 }

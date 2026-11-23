@@ -2,6 +2,7 @@ import { motion, useReducedMotion } from 'framer-motion';
 import { ChevronDown } from 'lucide-react';
 import { princessDay } from '../../content/princessDay';
 import { Crystal } from '../Crystal/Crystal';
+import { RoyalName } from '../RoyalName/RoyalName';
 
 export function PrincessDayIntro({ children }: { children?: React.ReactNode }) {
   const reduced = useReducedMotion();
@@ -24,7 +25,9 @@ export function PrincessDayIntro({ children }: { children?: React.ReactNode }) {
       </motion.p>
       <motion.h1 className="pd-hero__title serif" {...up(0.7)}>
         {t.title}
-        <span className="pd-hero__name text-prism">{t.name}</span>
+        <span className="pd-hero__name">
+          <RoyalName textClass="text-prism" />
+        </span>
       </motion.h1>
       <motion.p className="pd-hero__body" {...up(1.1)}>
         {t.body}

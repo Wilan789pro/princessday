@@ -138,7 +138,7 @@ export function RoyalCertificate({ spec, onReturn }: Props) {
             <div className="seal__frame">
               <img
                 src={url ?? ''}
-                alt={`${garden.certificate.titleTop} ${garden.certificate.titleMain}, awarded to Princess Prism. ${garden.certificate.citation} Sealed with a sapphire seal and stamped with her bouquet.`}
+                alt={`${garden.certificate.titleTop} ${garden.certificate.titleMain}, awarded to ${garden.certificate.name}. ${garden.certificate.citation} Sealed with a sapphire seal and stamped with her bouquet.`}
               />
             </div>
             <div className="garden__actions">

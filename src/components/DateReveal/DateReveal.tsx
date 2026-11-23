@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { audio } from '../../audio/AudioEngine';
 import { experience } from '../../content/experience';
 import { Crystal } from '../Crystal/Crystal';
+import { WithRoyalName } from '../RoyalName/RoyalName';
 import './DateReveal.css';
 
 interface Props {
@@ -64,7 +65,9 @@ export function DateReveal({ onContinue }: Props) {
         <motion.article className="dates__card dates__card--right glass" {...card(1.1, 30)}>
           <span className="dates__18 serif text-prism">{d.right.day}</span>
           <span className="dates__month mono">{d.right.month.toUpperCase()}</span>
-          <span className="dates__label serif">{d.right.label}</span>
+          <span className="dates__label serif">
+            <WithRoyalName text={d.right.label} />
+          </span>
         </motion.article>
       </div>
 

@@ -4,6 +4,7 @@ import { audio } from '../../audio/AudioEngine';
 import { princessDay } from '../../content/princessDay';
 import { Crystal } from '../Crystal/Crystal';
 import { Reveal } from './Reveal';
+import { WithRoyalName } from '../RoyalName/RoyalName';
 
 export function RoyalDecree({ children }: { children?: React.ReactNode }) {
   const t = princessDay.decree;
@@ -40,7 +41,7 @@ export function RoyalDecree({ children }: { children?: React.ReactNode }) {
                 viewport={{ once: true, amount: 0.6 }}
                 transition={{ delay: 0.15 * i, duration: 0.6 }}
               >
-                {a}
+                <WithRoyalName text={a} />
               </motion.li>
             ))}
           </ol>

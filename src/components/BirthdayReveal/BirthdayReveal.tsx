@@ -2,6 +2,7 @@ import { motion, useReducedMotion } from 'framer-motion';
 import { project25 } from '../../content/birthday';
 import { birthdayAssetUrl, type BirthdayAccess, type BirthdayBlock } from '../../hooks/useBirthdayAccess';
 import { Crystal } from '../Crystal/Crystal';
+import { RoyalName } from '../RoyalName/RoyalName';
 import './BirthdayReveal.css';
 
 function Block({ block }: { block: BirthdayBlock }) {
@@ -63,8 +64,9 @@ export function BirthdayReveal({ access }: { access: BirthdayAccess }) {
         <motion.div {...up(1.8)} className="br-crown" aria-hidden="true">
           <Crystal hue="gold" shape={0} size={70} float />
         </motion.div>
-        <motion.h2 id="br-headline" className="br-headline serif text-gold" {...up(2.1)}>
-          {r.unlocked.headline}
+        <motion.h2 id="br-headline" className="br-headline serif" {...up(2.1)}>
+          <span className="text-gold">{r.unlocked.headlineStart}</span> <RoyalName textClass="text-gold" />
+          <span className="text-gold">{r.unlocked.headlineEnd}</span>
         </motion.h2>
       </div>
 

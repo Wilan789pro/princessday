@@ -3,6 +3,8 @@
  * Nothing here is secret (it ships in the public bundle). No personal data.
  */
 
+import { ROYAL_NAME } from './royal';
+
 export type FlowerType = 'rose' | 'peony' | 'daisy' | 'lily' | 'tulip' | 'starflower';
 export type FlowerPart = 'petals' | 'centre' | 'leaves' | 'stem';
 export type SecretSymbol = 'star' | 'butterfly' | 'moon' | 'crown' | 'diamond';
@@ -197,7 +199,7 @@ export const garden = {
     titleTop: 'CERTIFICATE OF',
     titleMain: 'EXTRAORDINARY PRINCESSHOOD',
     awardedTo: 'Awarded to',
-    name: '❤️💎 Princess Prism 💎❤️™',
+    name: ROYAL_NAME,
     citation: 'For outstanding achievements in elegance, mischief, individuality and general royal conduct.',
     stampLabel: 'THE GARDEN OF WISHES',
     dateLine: 'Given on the eighteenth day of November, 2026',

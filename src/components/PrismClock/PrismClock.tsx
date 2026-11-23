@@ -4,6 +4,7 @@ import { project25 } from '../../content/birthday';
 import { BIRTHDAY_MS, PRINCESS_DAY_MS, pad2, type Remaining } from '../../utils/dates';
 import { now } from '../../utils/clock';
 import { Crystal } from '../Crystal/Crystal';
+import { WithRoyalName } from '../RoyalName/RoyalName';
 import './PrismClock.css';
 
 function Digit({ value }: { value: string }) {
@@ -43,7 +44,7 @@ function StatusTicker({ done }: { done: boolean }) {
   const msgs = project25.statusMessages;
   const [index, setIndex] = useState(0);
   const [chars, setChars] = useState(0);
-  const text = done ? 'COUNTDOWN COMPLETE. ACCESS GRANTED.' : msgs[index % msgs.length];
+  const text = done ? project25.statusReached : msgs[index % msgs.length];
 
   useEffect(() => {
     if (done) return;
@@ -81,7 +82,7 @@ interface Props {
   remaining: Remaining;
 }
 
-/** ACT VI – PROJECT 25: the live countdown to 18.12.2026 00:00 Mauritius. */
+/** ACT VI – THE 25th STAR: the live countdown to 18.12.2026 00:00 Mauritius. */
 export function PrismClock({ remaining }: Props) {
   const p = project25;
   const span = BIRTHDAY_MS - PRINCESS_DAY_MS;
@@ -102,22 +103,24 @@ export function PrismClock({ remaining }: Props) {
           <span className="pc-crystal__ring pc-crystal__ring--2" />
           <Crystal hue={reached ? 'gold' : 'sapphire'} shape={1} size="clamp(70px, 20vw, 96px)" float />
         </div>
-        <p className="eyebrow pc-file">FILE 25 / 25</p>
+        <p className="eyebrow pc-file">{p.eyebrow}</p>
         <h1 id="p25-title" className="pc-title mono">
           {p.name}
         </h1>
         <dl className="pc-meta mono">
           <div>
-            <dt className="sr-only">Destination</dt>
+            <dt className="sr-only">Rises on</dt>
             <dd>{p.destination}</dd>
           </div>
           <div>
-            <dt className="sr-only">Access status</dt>
-            <dd className={reached ? 'pc-meta--ok' : 'pc-meta--warn'}>{reached ? 'ACCESS STATUS: GRANTED' : p.accessStatus}</dd>
+            <dt className="sr-only">Status</dt>
+            <dd className={reached ? 'pc-meta--ok' : 'pc-meta--warn'}>{reached ? p.accessStatusReached : p.accessStatus}</dd>
           </div>
           <div>
-            <dt className="sr-only">Classification</dt>
-            <dd>{p.classification}</dd>
+            <dt className="sr-only">Reserved for</dt>
+            <dd>
+              <WithRoyalName text={p.classification} />
+            </dd>
           </div>
         </dl>
       </header>
