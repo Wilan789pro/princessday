@@ -122,19 +122,17 @@ describe('certificate uses her saved bouquet', () => {
   });
 });
 
-describe('Five Little Secrets content', () => {
-  it('maps every secret to an existing crown crystal and keeps messages new', () => {
-    const crystals = princessDay.crystals.items;
-    const items = garden.secrets.items;
-    expect(items.map((s) => s.name)).toEqual(['Radiance', 'Kindness', 'Elegance', 'Mischief', 'Unpredictable']);
-    for (const s of items) {
-      const crystal = crystals.find((c) => c.id === s.crystalId);
-      expect(crystal, s.id).toBeTruthy();
-      expect(s.message).not.toBe(crystal!.message);
-    }
-    expect(new Set(items.map((s) => s.symbol)).size).toBe(5);
+describe('Garden chapters (Five Little Secrets removed)', () => {
+  it('has exactly four chapters, numbered I–IV, in order', () => {
+    expect(garden.chapters.map((c) => c.id)).toEqual(['bloom', 'bouquet', 'wish', 'seal']);
+    expect(garden.chapters.map((c) => c.numeral)).toEqual(['I', 'II', 'III', 'IV']);
   });
-  it('keeps the existing crystal names untouched', () => {
+  it('no longer references the removed chapter anywhere in the Garden content', () => {
+    const text = JSON.stringify(garden);
+    expect(text).not.toMatch(/five little secrets|"secrets"|crownLine|unpredictable/i);
+    expect('secrets' in garden).toBe(false);
+  });
+  it('keeps the original crystal collection untouched', () => {
     expect(princessDay.crystals.items.map((c) => c.name)).toEqual(['Brilliance', 'Kindness', 'Elegance', 'Mischief', 'Uniqueness']);
   });
 });

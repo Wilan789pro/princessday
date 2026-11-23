@@ -7,7 +7,6 @@ import { ROYAL_NAME } from './royal';
 
 export type FlowerType = 'rose' | 'peony' | 'daisy' | 'lily' | 'tulip' | 'starflower';
 export type FlowerPart = 'petals' | 'centre' | 'leaves' | 'stem';
-export type SecretSymbol = 'star' | 'butterfly' | 'moon' | 'crown' | 'diamond';
 
 export interface PaletteColour {
   name: string;
@@ -67,10 +66,9 @@ export const garden = {
   chapters: [
     { id: 'bloom', numeral: 'I', name: 'The First Bloom' },
     { id: 'bouquet', numeral: 'II', name: 'The Grand Bouquet' },
-    { id: 'secrets', numeral: 'III', name: 'Five Little Secrets' },
-    { id: 'wish', numeral: 'IV', name: 'A Wish Upon a Star' },
-    { id: 'seal', numeral: 'V', name: 'The Royal Seal' },
-  ],
+    { id: 'wish', numeral: 'III', name: 'A Wish Upon a Star' },
+    { id: 'seal', numeral: 'IV', name: 'The Royal Seal' },
+  ] as const,
 
   bloom: {
     plantLabel: 'Plant the seed',
@@ -97,64 +95,6 @@ export const garden = {
     download: 'Download bouquet',
     continueLabel: 'Continue',
     useGardenBouquet: "Continue with the garden's bouquet",
-  },
-
-  secrets: {
-    intro: 'Five flowers are keeping something to themselves. Tap each one to coax it open.',
-    progress: (n: number) => `${n} / 5 secrets`,
-    crownLine: 'Five flowers. Five little secrets. One very unmistakable princess.',
-    continueLabel: 'Continue',
-    /**
-     * Linked to the existing crown crystals by `crystalId` (hue + gem shape are
-     * read from princessDay.crystals). Messages are NEW and editable.
-     */
-    items: [
-      {
-        id: 'radiance',
-        crystalId: 'brilliance',
-        name: 'Radiance',
-        flower: 'starflower' as FlowerType,
-        symbol: 'star' as SecretSymbol,
-        colours: { petals: '#CFEFFF', centre: '#F2C66D', leaves: '#5CB85C', stem: '#2F6B4F' },
-        message: 'You walk into a room and the lighting improves. Scientists remain baffled.',
-      },
-      {
-        id: 'kindness',
-        crystalId: 'kindness',
-        name: 'Kindness',
-        flower: 'daisy' as FlowerType,
-        symbol: 'butterfly' as SecretSymbol,
-        colours: { petals: '#FFFFFF', centre: '#FFE066', leaves: '#5CB85C', stem: '#2F6B4F' },
-        message: 'You are kind in the quiet ways, the ones that never ask to be noticed. They were noticed.',
-      },
-      {
-        id: 'elegance',
-        crystalId: 'elegance',
-        name: 'Elegance',
-        flower: 'lily' as FlowerType,
-        symbol: 'moon' as SecretSymbol,
-        colours: { petals: '#A99BEF', centre: '#F2C66D', leaves: '#26A69A', stem: '#2F6B4F' },
-        message: 'Even the moon takes notes on how to make an entrance.',
-      },
-      {
-        id: 'mischief',
-        crystalId: 'mischief',
-        name: 'Mischief',
-        flower: 'tulip' as FlowerType,
-        symbol: 'crown' as SecretSymbol,
-        colours: { petals: '#5FB3F5', centre: '#1F5FBF', leaves: '#5CB85C', stem: '#2F6B4F' },
-        message: 'Behind the royal composure lives a small, delightful agent of chaos. The crown is tilted on purpose.',
-      },
-      {
-        id: 'unpredictable',
-        crystalId: 'uniqueness',
-        name: 'Unpredictable',
-        flower: 'peony' as FlowerType,
-        symbol: 'diamond' as SecretSymbol,
-        colours: { petals: '#C8A2E8', centre: '#FFFFFF', leaves: '#26A69A', stem: '#2F6B4F' },
-        message: 'Impossible to predict, impossible to forget. A rare cut, and there are no copies.',
-      },
-    ],
   },
 
   wish: {

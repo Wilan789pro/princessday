@@ -34,7 +34,7 @@ On a later visit, the intro offers **Skip to Project 25** (after she has reached
 |---|---|
 | Intro / rewind / One More Thing / dates text | `src/content/experience.ts` |
 | Everything in Princess Day (crystals, compliments, decree, hidden glints, closing) | `src/content/princessDay.ts` |
-| The Garden of Wishes (chapter titles, palette, ribbons, five secrets, wish texts, certificate wording) | `src/content/garden.ts` |
+| The Garden of Wishes (chapter titles, palette, ribbons, wish texts, certificate wording) | `src/content/garden.ts` |
 | Project 25 labels, status messages, chamber lines (public, nothing secret) | `src/content/birthday.ts` |
 | Birthday content format (placeholder only, see below) | `server/birthday-content.json` |
 
@@ -46,13 +46,11 @@ It sits where the photo gallery used to be (`src/components/Garden/`), between t
 |---|---|---|
 | I · The First Bloom | `FirstBloom` | Tap **Plant the seed**: the seed falls, the stem grows, leaves unfold, a bud opens petal by petal, four more flowers bloom, the view pulls back to a tied bouquet. |
 | II · The Grand Bouquet | `BouquetStudio`, `ColourPalette`, `BouquetSVG` | 6 flowers (rose, peony, daisy, lily, tulip, starflower), each with petals / centre / leaves / stem. Tap a colour, then tap parts to paint them; fill whole flower, undo, reset. Add up to 7 flowers, then move, resize, tilt, remove, choose a ribbon, **Gather the bouquet**, and **Download bouquet** (2000 × 2500 PNG). |
-| III · Five Little Secrets | `FiveSecrets` | Radiance ★, Kindness 🦋, Elegance ☾, Mischief ♛, Unpredictable ◆. Each is linked to an existing crown crystal (it reuses that crystal's colour and gem shape) but has a new message. Finding all five forms a floral crown. Progress is kept for the browser session. |
-| IV · A Wish Upon a Star | `WishUponAStar` | Catch the shooting star and write an optional wish (500 characters max). Money/wealth wishes get the playful reply and are never sent. |
-| V · The Royal Seal | `RoyalCertificate` | The sapphire seal forms; pressing it reveals the **Certificate of Extraordinary Princesshood** (2480 × 3508 PNG, A4 at 300 DPI), stamped with *her* bouquet. **Save My Certificate** / **Return to My Kingdom** (scrolls to the closing). |
+| III · A Wish Upon a Star | `WishUponAStar` | Catch the shooting star and write an optional wish (500 characters max). Money/wealth wishes get the playful reply and are never sent. |
+| IV · The Royal Seal | `RoyalCertificate` | The sapphire seal forms; pressing it reveals the **Certificate of Extraordinary Princesshood** (2480 × 3508 PNG, A4 at 300 DPI), stamped with *her* bouquet. **Save My Certificate** / **Return to My Kingdom** (scrolls to the closing). |
 
 **Where things are kept:**
 - The bouquet is stored only in this browser (`localStorage['prism:bouquet']`).
-- Secret progress is kept for the session (`sessionStorage['prism:garden-secrets']`).
 - PNGs are generated on the device: iPhone gets the share sheet ("Save Image"), and computers get a normal download.
 - Nothing is uploaded.
 
@@ -125,7 +123,7 @@ Nothing is deployed until you merge into `main` (GitHub Pages) or run a hosting 
 | Feature | On GitHub Pages |
 |---|---|
 | Intro, rewind, Princess Day, crystals, compliments, decree, glints, closing, One More Thing, dates | ✅ works |
-| Garden: bloom, bouquet studio + PNG, five secrets + crown, certificate + PNG, bouquet saved in the browser | ✅ works (all local) |
+| Garden: bloom, bouquet studio + PNG, certificate + PNG, bouquet saved in the browser | ✅ works (all local) |
 | Wish: the wealth joke and validation | ✅ works (local) |
 | Wish delivery | ❌ no server. The page says delivery isn't switched on, and the wish is checked and discarded (nothing sent or saved) |
 | Project 25 countdown and the chamber animation | ✅ works, using the **phone's** clock (no server time correction) |

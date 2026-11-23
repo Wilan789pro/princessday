@@ -5,7 +5,6 @@ import { emptyBouquet, loadBouquet, saveBouquet, type BouquetSpec } from '../../
 import { Reveal } from '../PrincessDay/Reveal';
 import { BouquetStudio } from './BouquetStudio';
 import { FirstBloom } from './FirstBloom';
-import { FiveSecrets } from './FiveSecrets';
 import { RoyalCertificate } from './RoyalCertificate';
 import { WishUponAStar } from './WishUponAStar';
 import './Garden.css';
@@ -17,7 +16,7 @@ interface Props {
 
 /**
  * CHAPTER IV of Princess Day – THE GARDEN OF WISHES.
- * Five chapters in one continuous scene. Holds the bouquet specification,
+ * Four chapters in one continuous scene. Holds the bouquet specification,
  * which is saved only in this browser and reused by the certificate.
  */
 export function GardenOfWishes({ onReturn }: Props) {
@@ -45,6 +44,8 @@ export function GardenOfWishes({ onReturn }: Props) {
     setReached((r) => Math.max(r, i));
   };
   const next = () => go(Math.min(chapter + 1, garden.chapters.length - 1));
+  /** Chapters are chosen by id, so the order/numbering lives only in content. */
+  const chapterId = garden.chapters[chapter].id;
 
   return (
     <section className="section garden" aria-labelledby="garden-title">
@@ -91,11 +92,10 @@ export function GardenOfWishes({ onReturn }: Props) {
             <p className="garden__chapter-label eyebrow">
               {garden.chapters[chapter].numeral} · {garden.chapters[chapter].name}
             </p>
-            {chapter === 0 && <FirstBloom onContinue={next} />}
-            {chapter === 1 && <BouquetStudio spec={spec} onChange={setSpec} onContinue={next} />}
-            {chapter === 2 && <FiveSecrets onContinue={next} />}
-            {chapter === 3 && <WishUponAStar onContinue={next} />}
-            {chapter === 4 && <RoyalCertificate spec={spec} onReturn={onReturn} />}
+            {chapterId === 'bloom' && <FirstBloom onContinue={next} />}
+            {chapterId === 'bouquet' && <BouquetStudio spec={spec} onChange={setSpec} onContinue={next} />}
+            {chapterId === 'wish' && <WishUponAStar onContinue={next} />}
+            {chapterId === 'seal' && <RoyalCertificate spec={spec} onReturn={onReturn} />}
           </motion.div>
         </AnimatePresence>
       </div>

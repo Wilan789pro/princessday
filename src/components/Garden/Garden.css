@@ -492,74 +492,8 @@
   }
 }
 
-/* ------------------------------------------------ III. Five Little Secrets */
-.secrets__scene {
-  max-width: 640px;
-  margin: 0 auto;
-  padding: 22px 10px;
-  min-height: 300px;
-}
-
-.secrets__grid {
-  position: relative;
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 8px 4px;
-}
-
-.secrets__grid > li {
-  width: calc((100% - 8px) / 3);
-  max-width: 120px;
-}
-
-.secret {
-  position: relative;
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 4px 4px 8px;
-  border-radius: 18px;
-  transition: background 0.4s ease;
-}
-
-.secret.is-active {
-  background: radial-gradient(circle at 50% 45%, rgba(57, 139, 255, 0.24), transparent 70%);
-}
-
-.secret__art {
-  width: 100%;
-  aspect-ratio: 1;
-  overflow: visible;
-}
-
-.secret__symbol {
-  position: relative;
-  z-index: 1;
-  width: 26px;
-  height: 26px;
-  margin-bottom: -10px;
-  filter: drop-shadow(0 0 6px rgba(168, 223, 255, 0.9));
-}
-
-.secret-symbol {
-  width: 100%;
-  height: 100%;
-}
-
-.secret__burst {
-  position: absolute;
-  inset: -14px;
-  border-radius: 50%;
-  border: 2px solid rgba(168, 223, 255, 0.8);
-  animation: secret-burst 0.9s ease-out forwards;
-}
-
-@keyframes secret-burst {
+/* shared ring burst (used by the seal press) */
+@keyframes garden-burst {
   from {
     transform: scale(0.3);
     opacity: 1;
@@ -570,132 +504,7 @@
   }
 }
 
-.secret__name {
-  font-family: var(--f-mono);
-  font-size: 10px;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: var(--text-dim);
-}
-
-.secret.is-open .secret__name {
-  color: var(--c-ice);
-}
-
-.secrets__progress {
-  margin: 16px 0 0;
-  font-size: 11px;
-  letter-spacing: 0.24em;
-  text-transform: uppercase;
-  color: var(--text-faint);
-}
-
-.secrets__panel-wrap {
-  min-height: 140px;
-  max-width: 520px;
-  margin: 18px auto 0;
-}
-
-.secrets__panel {
-  padding: 20px 22px;
-}
-
-.secrets__panel-title {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.secrets__panel-icon {
-  width: 18px;
-  height: 18px;
-  display: inline-block;
-}
-
-.secrets__message {
-  margin: 8px 0 0;
-  font-size: clamp(21px, 5.6vw, 26px);
-  line-height: 1.3;
-}
-
-.secrets__crown-line {
-  max-width: 24ch;
-  margin: 8px auto 0;
-  font-size: clamp(24px, 6.4vw, 32px);
-  font-style: italic;
-  line-height: 1.25;
-  color: #fff;
-}
-
-/* the floral crown */
-.crown {
-  position: relative;
-  width: 100%;
-  max-width: 460px;
-  aspect-ratio: 460 / 300;
-  margin: 0 auto;
-}
-
-.crown__band {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  overflow: visible;
-}
-
-.crown__glow {
-  position: absolute;
-  left: 15%;
-  right: 15%;
-  top: 20%;
-  bottom: 10%;
-  border-radius: 50%;
-  background: radial-gradient(closest-side, rgba(168, 223, 255, 0.35), transparent);
-  animation: pulse-glow 4s ease-in-out infinite;
-}
-
-.crown__flower {
-  position: absolute;
-  aspect-ratio: 1;
-  translate: -50% -50%;
-}
-
-.crown__gem {
-  position: absolute;
-  translate: -50% -50%;
-}
-
-.crown__sparkles i {
-  position: absolute;
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: #fff;
-  box-shadow: 0 0 8px var(--c-ice);
-  opacity: 0;
-  animation: crown-twinkle 3.2s ease-in-out infinite;
-}
-
-@keyframes crown-twinkle {
-  0%,
-  100% {
-    opacity: 0;
-    transform: scale(0.4);
-  }
-  50% {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-@media (min-width: 640px) {
-  .secrets__grid > li {
-    width: calc((100% - 16px) / 5);
-  }
-}
-
-/* ------------------------------------------------ IV. Wish */
+/* ------------------------------------------------ III. Wish */
 .wish__sky {
   max-width: 560px;
   min-height: 380px;
@@ -871,7 +680,7 @@
   line-height: 1.35;
 }
 
-/* ------------------------------------------------ V. Royal Seal */
+/* ------------------------------------------------ IV. Royal Seal */
 .seal__letter {
   position: relative;
   max-width: 460px;
@@ -933,7 +742,7 @@
   inset: 0;
   border-radius: 50%;
   border: 3px solid rgba(31, 95, 191, 0.6);
-  animation: secret-burst 0.9s ease-out forwards;
+  animation: garden-burst 0.9s ease-out forwards;
 }
 
 .seal__hint {
@@ -974,8 +783,6 @@
 
 @media (prefers-reduced-motion: reduce) {
   .bouquet-selected-ring,
-  .crown__glow,
-  .crown__sparkles i,
   .seal__button--ready svg,
   .wish__star svg {
     animation: none;
