@@ -49,5 +49,8 @@ export const project25 = {
       'The chamber opened on this device, but the server says it is not time yet. The transmission stays sealed until 18.12.2026.',
     unavailable:
       'The transmission could not be reached. Please refresh in a moment.',
+    /** Shown on static hosting (GitHub Pages), where there is no server to release the content. */
+    staticHosting:
+      'The chamber is open, but its transmission is not available on this version of the site yet.',
   },
 };

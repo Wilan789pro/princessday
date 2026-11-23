@@ -4,7 +4,7 @@ import { audio } from '../../audio/AudioEngine';
 import { princessDay } from '../../content/princessDay';
 import { ComplimentGenerator } from '../ComplimentGenerator/ComplimentGenerator';
 import { CrystalCollection } from '../CrystalCollection/CrystalCollection';
-import { PhotoGallery } from '../PhotoGallery/PhotoGallery';
+import { GardenOfWishes } from '../Garden/GardenOfWishes';
 import { Closing } from './Closing';
 import { HiddenMessage } from './HiddenMessage';
 import { PrincessDayIntro } from './PrincessDayIntro';
@@ -37,6 +37,12 @@ export function PrincessDay({ onComplete }: Props) {
 
   useEffect(() => () => clearTimeout(toastTimer.current), []);
 
+  // "Return to My Kingdom": back to the existing Closing section, which leads on to One More Thing.
+  const returnToKingdom = useCallback(() => {
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    document.querySelector('.closing')?.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' });
+  }, []);
+
   // Glints are placed by index; extra hidden messages beyond 4 are simply not shown.
   const glint = (i: number, style: React.CSSProperties) => {
     const s = secrets[i];
@@ -49,7 +55,7 @@ export function PrincessDay({ onComplete }: Props) {
       <CrystalCollection>{glint(1, { bottom: '6%', left: '6%' })}</CrystalCollection>
       <ComplimentGenerator>{glint(2, { top: '12%', left: '8%' })}</ComplimentGenerator>
       <RoyalDecree>{glint(3, { bottom: '4%', right: '7%' })}</RoyalDecree>
-      <PhotoGallery />
+      <GardenOfWishes onReturn={returnToKingdom} />
       <Closing secretsFound={found.length} secretsTotal={Math.min(secrets.length, 4)} onContinue={onComplete} />
 
       <AnimatePresence>

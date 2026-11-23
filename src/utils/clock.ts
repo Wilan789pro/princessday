@@ -10,6 +10,8 @@
  *   `vite dev`, or when VITE_ENABLE_TEST_CLOCK=true. The real target never changes.
  */
 
+import { STATIC_HOSTING } from './hosting';
+
 const params = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : new URLSearchParams();
 
 export const TEST_CLOCK_ENABLED = import.meta.env.DEV || import.meta.env.VITE_ENABLE_TEST_CLOCK === 'true';
@@ -33,7 +35,8 @@ export function testClockQuery(): string {
 
 let synced = false;
 export async function syncWithServer(): Promise<void> {
-  if (synced || TEST_NOW_ACTIVE) return;
+  // Static hosting has no /api/time: keep the device clock.
+  if (synced || TEST_NOW_ACTIVE || STATIC_HOSTING) return;
   synced = true;
   try {
     const t0 = Date.now();

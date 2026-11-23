@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { testClockQuery } from '../utils/clock';
+import { STATIC_HOSTING } from '../utils/hosting';
 
 export type BirthdayBlock =
   | { type: 'text'; text: string }
@@ -21,7 +22,9 @@ export type BirthdayAccess =
   | { state: 'loading' }
   | { state: 'open'; content: BirthdayContent }
   | { state: 'server-locked' }
-  | { state: 'unavailable' };
+  | { state: 'unavailable' }
+  /** Static hosting: there is no server to ask, so no content can be delivered. */
+  | { state: 'static' };
 
 /** Private assets are served by the time-gated endpoint, never from /public. */
 export function birthdayAssetUrl(src: string): string {
@@ -39,6 +42,11 @@ export function useBirthdayAccess(enabled: boolean): BirthdayAccess {
 
   useEffect(() => {
     if (!enabled) return;
+    if (STATIC_HOSTING) {
+      // Never guess or embed content in the page: say honestly it is not available here.
+      setAccess({ state: 'static' });
+      return;
+    }
     let cancelled = false;
     let retryTimer: ReturnType<typeof setTimeout> | undefined;
 
