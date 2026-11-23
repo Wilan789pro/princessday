@@ -168,9 +168,9 @@ export const garden = {
     disclosureLive:
       'Sending delivers your wish privately, by email, to the person who made this garden. It is never shown on this website or stored here.',
     disclosureDryRun:
-      'Wish delivery is not switched on yet. If you send a wish now it is only checked, then discarded: it is not emailed, shown or saved anywhere.',
+      'Wish delivery is not connected yet, so a wish made now stays between you and the stars: it is not sent, emailed or saved anywhere.',
     acceptedLive: 'Your wish has been sent privately to the stars.',
-    acceptedDryRun: 'The stars heard you. (Delivery is not switched on yet, so the wish was not emailed or saved.)',
+    acceptedDryRun: 'Your wish has been made. Wish delivery is not connected yet, so it stays between you and the stars: it was not sent anywhere or saved.',
     keptPrivate: 'Kept between you and the stars. That works too.',
     errors: {
       empty: 'Even a tiny wish needs at least one word.',

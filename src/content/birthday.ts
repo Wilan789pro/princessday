@@ -50,15 +50,18 @@ export const project25 = {
   },
 
   reveal: {
-    loading: 'Decrypting transmission…',
-    placeholderNote:
+    loading: 'Receiving the starlight…',
+    /** Shown in production when the server still holds the development placeholder. */
+    notReady: 'The chamber is open, but the message inside is still being written. It will be worth the wait.',
+    /** Development builds only – never shown in production. */
+    devPlaceholderNote:
       'Development placeholder: the real birthday content has not been written yet. Edit server/birthday-content.json.',
     serverLocked:
       'The chamber opened on this device, but the server says it is not time yet. The transmission stays sealed until 18.12.2026.',
     unavailable:
-      'The transmission could not be reached. Please refresh in a moment.',
+      'The message could not be reached just now. Please try again in a moment.',
     /** Shown on static hosting (GitHub Pages), where there is no server to release the content. */
     staticHosting:
-      'The chamber is open, but its transmission is not available on this version of the site yet.',
+      'The chamber is open. Its message is kept somewhere safer than this page, and the private messenger that delivers it is not connected yet.',
   },
 };

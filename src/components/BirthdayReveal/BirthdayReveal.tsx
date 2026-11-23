@@ -79,9 +79,13 @@ export function BirthdayReveal({ access }: { access: BirthdayAccess }) {
         {access.state === 'server-locked' && <p className="br-status">{r.reveal.serverLocked}</p>}
         {access.state === 'unavailable' && <p className="br-status">{r.reveal.unavailable}</p>}
         {access.state === 'static' && <p className="br-status">{r.reveal.staticHosting}</p>}
-        {access.state === 'open' && (
+        {/* Unwritten (placeholder) content is never shown in production. */}
+        {access.state === 'open' && access.content._placeholder && !import.meta.env.DEV && (
+          <p className="br-status">{r.reveal.notReady}</p>
+        )}
+        {access.state === 'open' && (!access.content._placeholder || import.meta.env.DEV) && (
           <div className="br-content">
-            {access.content._placeholder && <p className="br-dev mono">{r.reveal.placeholderNote}</p>}
+            {access.content._placeholder && <p className="br-dev mono">{r.reveal.devPlaceholderNote}</p>}
             {access.content.eyebrow && <p className="eyebrow br-eyebrow">{access.content.eyebrow}</p>}
             {access.content.headline && <h3 className="br-content-title serif">{access.content.headline}</h3>}
             {access.content.blocks?.map((b, i) => (

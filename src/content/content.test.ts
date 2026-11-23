@@ -7,7 +7,9 @@ import { princessDay } from './princessDay';
 import { ROYAL_NAME } from './royal';
 
 /** Every user-facing string in the content files (functions are called with sample values). */
-export function collectStrings(value: unknown, out: string[] = []): string[] {
+export function collectStrings(value: unknown, out: string[] = [], key = ''): string[] {
+  // Keys starting with "dev" hold development-only notes that production never renders.
+  if (/^dev[A-Z]/.test(key)) return out;
   if (typeof value === 'string') out.push(value);
   else if (typeof value === 'function') {
     for (const sample of [[0], [1], [4], [3, 5]]) {
@@ -19,7 +21,7 @@ export function collectStrings(value: unknown, out: string[] = []): string[] {
       }
     }
   } else if (Array.isArray(value)) value.forEach((v) => collectStrings(v, out));
-  else if (value && typeof value === 'object') Object.values(value).forEach((v) => collectStrings(v, out));
+  else if (value && typeof value === 'object') Object.entries(value).forEach(([k, v]) => collectStrings(v, out, k));
   return out;
 }
 
@@ -67,5 +69,27 @@ describe('THE 25th STAR', () => {
 
   it('drops the old classified-file framing from the countdown', () => {
     for (const s of collectStrings(project25)) expect(s).not.toMatch(/FILE 25|CLASSIFICATION|T-ZERO|DESTINATION:/);
+  });
+});
+
+describe('launch gate: no unfinished copy ships', () => {
+  const UNFINISHED = /\[\s*placeholder|placeholder|coming soon|to be written|lorem ipsum|\bTODO\b|\bTBD\b|\bFIXME\b|\[\s*the birthday message|caption (one|two|three|four)/i;
+
+  it('no shipped user-visible string contains a placeholder or draft marker', () => {
+    const offenders = ALL.filter((s) => UNFINISHED.test(s));
+    expect(offenders).toEqual([]);
+  });
+
+  it('every crystal and hidden glint has a real message', () => {
+    for (const c of princessDay.crystals.items) expect(c.message.length, c.id).toBeGreaterThan(40);
+    expect(princessDay.hiddenMessages).toHaveLength(4);
+    for (const h of princessDay.hiddenMessages) expect(h.text.length, h.id).toBeGreaterThan(30);
+    expect(princessDay.closing.body.length).toBeGreaterThan(80);
+  });
+
+  it('never claims delivery when wishes are not connected', () => {
+    expect(garden.wish.acceptedDryRun).toMatch(/not (sent|connected)/i);
+    expect(garden.wish.disclosureDryRun).toMatch(/not connected/i);
+    expect(project25.reveal.staticHosting).toMatch(/not connected/i);
   });
 });
