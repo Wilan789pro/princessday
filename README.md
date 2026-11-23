@@ -112,4 +112,30 @@ The brief specified `Africa/Port_Louis`, but **that is not a valid IANA zone ID*
 - Safe-area insets for the iPhone notch and Dynamic Island, `dvh` units, 44px touch targets. Every Garden control is a real button with a label. The selected flower part is shown with a dashed outline, not just colour.
 
 ## Deploying
-Not deployed. When approved, `vercel` from this folder deploys both the site and the `api/` functions. Pages are marked `noindex`.
+
+Nothing is deployed until you merge into `main` (GitHub Pages) or run a hosting command yourself.
+
+### GitHub Pages (static hosting): https://wilan789pro.github.io/princessday/
+- **Workflow:** `.github/workflows/deploy.yml` runs on every push to `main`, or manually. It runs `npm ci`, the type check, the tests, then `vite build --mode pages`, and deploys `dist/`. Its deploy job refuses to publish any branch other than `main`.
+- **Base path:** `--mode pages` serves the site from `/princessday/`. Locally: `npm run build:pages`, then `npm run preview:pages` (no `/api` there either, like the real host).
+- **Repository setting:** *Settings → Pages → Build and deployment → Source* must be **GitHub Actions**.
+
+**GitHub Pages cannot run the `api/` functions,** so the `pages` build makes no API calls and says honestly what is unavailable:
+
+| Feature | On GitHub Pages |
+|---|---|
+| Intro, rewind, Princess Day, crystals, compliments, decree, glints, closing, One More Thing, dates | ✅ works |
+| Garden: bloom, bouquet studio + PNG, five secrets + crown, certificate + PNG, bouquet saved in the browser | ✅ works (all local) |
+| Wish: the wealth joke and validation | ✅ works (local) |
+| Wish delivery | ❌ no server. The page says delivery isn't switched on, and the wish is checked and discarded (nothing sent or saved) |
+| Project 25 countdown and the chamber animation | ✅ works, using the **phone's** clock (no server time correction) |
+| Birthday content in the 25th Chamber | ❌ no server to release it. After opening, the chamber says the transmission isn't available on this version of the site |
+
+**Why the birthday content can't be secured on GitHub Pages:** everything published there (and everything in this public repository) can be read by anyone at any time. A date check in the browser only hides things visually: anyone can read the files or change their clock. So no private content is published at all.
+
+**Safest ways to add it later** (not done; needs your approval):
+1. Keep Pages for the site and add one small serverless endpoint for `/api/birthday` (for example a Cloudflare Worker, Vercel or Netlify function), with the content kept in that service's private settings. This needs a small change so the Pages build calls that endpoint's address.
+2. Host the whole site where the existing `api/` functions run (`vercel.json` is already set up), with the content supplied privately, not committed.
+
+### Vercel (with the API)
+`vercel` from this folder deploys both the site and the `api/` functions (normal build, base `/`). Not used yet. Pages are marked `noindex`.

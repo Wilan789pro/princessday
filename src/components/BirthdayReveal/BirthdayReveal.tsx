@@ -76,6 +76,7 @@ export function BirthdayReveal({ access }: { access: BirthdayAccess }) {
         )}
         {access.state === 'server-locked' && <p className="br-status">{r.reveal.serverLocked}</p>}
         {access.state === 'unavailable' && <p className="br-status">{r.reveal.unavailable}</p>}
+        {access.state === 'static' && <p className="br-status">{r.reveal.staticHosting}</p>}
         {access.state === 'open' && (
           <div className="br-content">
             {access.content._placeholder && <p className="br-dev mono">{r.reveal.placeholderNote}</p>}

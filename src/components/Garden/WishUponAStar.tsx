@@ -1,9 +1,11 @@
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { ArrowRight, Send, Star } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import { WISH_MAX_LENGTH, isWealthWish, validateWish, wishLength } from '../../../shared/wishRules.js';
+import { WISH_MAX_LENGTH, wishLength } from '../../../shared/wishRules.js';
 import { audio } from '../../audio/AudioEngine';
 import { garden } from '../../content/garden';
+import { submitWish, wishDeliveryMode } from '../../garden/wishClient';
+import { STATIC_HOSTING } from '../../utils/hosting';
 
 type Mode = 'sky' | 'writing' | 'sending' | 'accepted' | 'kept';
 type Delivery = 'email' | 'dry-run' | 'unknown';
@@ -29,12 +31,9 @@ export function WishUponAStar({ onContinue }: { onContinue: () => void }) {
 
   useEffect(() => {
     let cancelled = false;
-    fetch('/api/wish', { cache: 'no-store' })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((d) => {
-        if (!cancelled && (d?.delivery === 'email' || d?.delivery === 'dry-run')) setDelivery(d.delivery);
-      })
-      .catch(() => {});
+    wishDeliveryMode(STATIC_HOSTING).then((d) => {
+      if (!cancelled) setDelivery(d);
+    });
     return () => {
       cancelled = true;
     };
@@ -59,40 +58,28 @@ export function WishUponAStar({ onContinue }: { onContinue: () => void }) {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    const v = validateWish(text);
-    if (!v.ok) {
-      setError(w.errors[v.error] ?? w.errors.generic);
+    setMode('sending');
+    // Validation and the wealth joke are handled locally first: the joke wish
+    // never leaves the device. On static hosting nothing is sent at all.
+    const r = await submitWish(text, {
+      staticHosting: STATIC_HOSTING,
+      composeMs: Math.round(performance.now() - composeStart.current),
+      honeypot,
+    });
+    if (r.kind === 'wealth') {
+      setMode('writing');
+      return showJoke();
+    }
+    if (r.kind === 'accepted') {
+      setText('');
+      setJoke(false);
+      setAccepted(r.delivery);
+      setMode('accepted');
+      audio.golden();
       return;
     }
-    // The joke wish never leaves the device.
-    if (isWealthWish(v.value)) return showJoke();
-
-    setMode('sending');
-    try {
-      const res = await fetch('/api/wish', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ wish: v.value, website: honeypot, composeMs: Math.round(performance.now() - composeStart.current) }),
-      });
-      const data = await res.json().catch(() => null);
-      if (data?.status === 'rejected' && data.reason === 'wealth') {
-        setMode('writing');
-        return showJoke();
-      }
-      if (res.ok && data?.status === 'accepted') {
-        setText('');
-        setJoke(false);
-        setAccepted(data.delivery === 'email' ? 'email' : 'dry-run');
-        setMode('accepted');
-        audio.golden();
-        return;
-      }
-      setMode('writing');
-      setError(w.errors[data?.error] ?? w.errors.generic);
-    } catch {
-      setMode('writing');
-      setError(w.errors.network);
-    }
+    setMode('writing');
+    setError(w.errors[r.error] ?? w.errors.generic);
   };
 
   const keep = () => {

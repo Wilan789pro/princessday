@@ -72,8 +72,13 @@ export default defineConfig(({ mode }) => {
     WISH_FROM_EMAIL: env.WISH_FROM_EMAIL ?? '',
     WISH_ALLOWED_ORIGINS: env.WISH_ALLOWED_ORIGINS ?? '',
   };
+  // `--mode pages`: GitHub Pages build. Served from /princessday/, and there is
+  // no server there, so the local /api middleware is not mounted either (a
+  // local `vite preview --mode pages` then behaves like the real static host).
+  const pages = mode === 'pages';
   return {
-    plugins: [react(), birthdayApi(), wishApi(serverEnv)],
+    base: pages ? '/princessday/' : '/',
+    plugins: pages ? [react()] : [react(), birthdayApi(), wishApi(serverEnv)],
     build: { target: 'es2020', cssTarget: 'safari15' },
   };
 });
