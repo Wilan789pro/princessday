@@ -6,6 +6,7 @@ import { project25 } from '../../content/birthday';
 import { BIRTHDAY_MS, PRINCESS_DAY_MS } from '../../utils/dates';
 import { now } from '../../utils/clock';
 import { Crystal } from '../Crystal/Crystal';
+import { initialDoorState, pressLockedDoor, type DoorReaction } from '../../utils/refusals';
 import './BirthdayChamber.css';
 
 type ChamberState = 'locked' | 'ready' | 'opening' | 'open';
@@ -52,7 +53,11 @@ export function BirthdayChamber({ reached, onGold, onOpened }: Props) {
   const reduced = !!useReducedMotion();
   const [state, setState] = useState<ChamberState>(reached ? 'ready' : 'locked');
   const [phase, setPhase] = useState<Phase>('idle');
+  /** Locked-door refusals: cosmetic only, never involved in opening the chamber. */
   const [pokes, setPokes] = useState(0);
+  const [refusal, setRefusal] = useState<{ message: string; reaction: DoorReaction } | null>(null);
+  const doorState = useRef(initialDoorState());
+  const lastDoorSound = useRef(0);
   const rootRef = useRef<HTMLDivElement>(null);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
   const cbs = useRef({ onGold, onOpened });
@@ -112,9 +117,26 @@ export function BirthdayChamber({ reached, onGold, onOpened }: Props) {
 
   useEffect(() => () => timers.current.forEach(clearTimeout), []);
 
-  const poke = () => {
-    audio.clunk();
-    setPokes((p) => p + 1);
+  const refusalContent = useMemo(
+    () => ({ opening: c.curiousLines, pool: [...c.curiousLines, ...c.refusals], special: c.specialRefusals }),
+    [c],
+  );
+
+  /**
+   * A press on the LOCKED door: picks the next refusal and a small reaction.
+   * Deliberately touches nothing else – not state, phase, reached or open().
+   */
+  const pressDoor = () => {
+    const r = pressLockedDoor(doorState.current, refusalContent);
+    doorState.current = r.state;
+    setRefusal({ message: r.message, reaction: r.reaction });
+    setPokes(r.state.presses);
+    const t = performance.now();
+    if (t - lastDoorSound.current > 250) {
+      lastDoorSound.current = t;
+      if (r.state.presses % 2 === 1) audio.clunk();
+      else audio.chime(r.state.presses % 7);
+    }
   };
 
   const showRays = phase === 'part' || phase === 'done';
@@ -145,7 +167,15 @@ export function BirthdayChamber({ reached, onGold, onOpened }: Props) {
           <motion.div
             key={pokes}
             className="chamber__lock-inner"
-            animate={pokes && !reduced && state === 'locked' ? { x: [0, -8, 8, -6, 6, 0] } : {}}
+            animate={
+              pokes && !reduced && state === 'locked'
+                ? refusal?.reaction === 'wobble'
+                  ? { rotate: [0, -9, 7, -4, 2, 0] }
+                  : refusal?.reaction === 'shake'
+                    ? { x: [0, -8, 8, -6, 6, 0] }
+                    : { scale: [1, 1.06, 1] }
+                : {}
+            }
             transition={{ duration: 0.45 }}
           >
             <svg viewBox="0 0 120 120" className="chamber__ring">
@@ -174,6 +204,10 @@ export function BirthdayChamber({ reached, onGold, onOpened }: Props) {
           </motion.div>
         </div>
 
+        {state === 'locked' && pokes > 0 && !reduced && (
+          <span key={pokes} className={`chamber__poke chamber__poke--${refusal?.reaction ?? 'shake'}`} aria-hidden="true" />
+        )}
+
         <div className="chamber__particles" aria-hidden="true">
           {particles.map((p, i) => (
             <i
@@ -193,8 +227,9 @@ export function BirthdayChamber({ reached, onGold, onOpened }: Props) {
           <button
             type="button"
             className="chamber__hit"
-            onClick={poke}
+            onClick={pressDoor}
             aria-label="The 25th Chamber. Access restricted, sealed until 18 December 2026. Try the door."
+            aria-describedby="chamber-refusal"
           />
         )}
         {state === 'ready' && (
@@ -202,6 +237,9 @@ export function BirthdayChamber({ reached, onGold, onOpened }: Props) {
         )}
       </div>
 
+      <p id="chamber-refusal" className="sr-only" aria-live="polite" aria-atomic="true">
+        {state === 'locked' && refusal ? refusal.message : ''}
+      </p>
       <div className="chamber__status" aria-live="polite">
         {state === 'locked' && (
           <>
@@ -209,30 +247,24 @@ export function BirthdayChamber({ reached, onGold, onOpened }: Props) {
               <Lock size={14} aria-hidden="true" /> {c.lockedTitle}
             </p>
             <p className="chamber__sealed mono">{c.lockedSub}</p>
-            <AnimatePresence mode="wait">
-              {pokes > 0 && (
-                <motion.div
+            {/* One complete line per press, replaced instantly – rapid taps never cut a message short. */}
+            {pokes > 0 && refusal && (
+              <div className="glass chamber__curious" aria-hidden="true">
+                <motion.p
                   key={pokes}
-                  className="glass chamber__curious"
-                  initial={{ opacity: 0, y: 10 }}
+                  className={`serif chamber__curious-lead${pokes <= 1 ? '' : ' chamber__curious-lead--small'}`}
+                  initial={reduced ? false : { opacity: 0, y: 6 }}
                   animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.22 }}
                 >
-                  {c.curiousLines.map((line, i) => (
-                    <motion.p
-                      key={i}
-                      initial={{ opacity: 0, filter: reduced ? 'none' : 'blur(4px)' }}
-                      animate={{ opacity: 1, filter: 'blur(0px)' }}
-                      transition={{ delay: 0.2 + i * 0.9, duration: 0.6 }}
-                      className={i === 0 ? 'serif chamber__curious-lead' : ''}
-                    >
-                      {line}
-                    </motion.p>
-                  ))}
-                </motion.div>
-              )}
-            </AnimatePresence>
-            {pokes === 0 && <p className="chamber__tap-hint">Tap the door, if you dare.</p>}
+                  {refusal.message}
+                </motion.p>
+                <p className="chamber__attempts mono" aria-hidden="true">
+                  Attempt {pokes}
+                </p>
+              </div>
+            )}
+            {pokes === 0 && <p className="chamber__tap-hint">{c.doorHint}</p>}
           </>
         )}
         {state === 'ready' && (

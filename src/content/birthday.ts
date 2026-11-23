@@ -34,11 +34,36 @@ export const project25 = {
     description: 'Something has been placed inside. It is sealed until the clock says otherwise.',
     lockedTitle: 'ACCESS RESTRICTED',
     lockedSub: 'SEALED UNTIL 18.12.2026',
+    /** First three presses, in this order. */
     curiousLines: [
       'Well, well. Someone is curious.',
       'Unfortunately, even royalty must respect the countdown.',
       'Come back on December 18.',
     ],
+    /** Further presses: a shuffle bag over the openers and these refusals. */
+    refusals: [
+      "Well, someone's impatient. The royal calendar hasn't approved your entrance yet.",
+      'Nice try, Your Highness. Even diamonds have to wait for their moment.',
+      'The door says no. The crown says patience.',
+      'Trying again? I admire the determination.',
+      'Knocking politely will not make December arrive any faster. Adorable attempt, though.',
+      'This door only opens for a princess who is exactly twenty-five. Not a second sooner.',
+      'The royal guards have been told to be charming, but firm.',
+      'Locked. Sealed. Bolted. Slightly flattered by all the attention.',
+      'If impatience were a crown jewel, you would be wearing it right now.',
+      'The stars are still lining up. They refuse to rush, even for you.',
+      'Persistence noted. Rewards will be issued on the eighteenth of December.',
+      'Shh. The surprise is sleeping.',
+      'Royal decree: no peeking. Yes, that includes you. Especially you.',
+      'That was a very determined tap. The door remains unimpressed. Mostly.',
+      'A little mystery suits you. Let it last a few more days.',
+    ],
+    /** One-off lines for exact attempt numbers. */
+    specialRefusals: {
+      10: 'Ten knocks. The door is starting to blush, but it still says no.',
+      25: 'Twenty-five knocks. Fitting. Still locked, though.',
+    } as Record<number, string>,
+    doorHint: 'Tap the door, if you dare.',
     readyLabel: 'Open the chamber',
   },
 
