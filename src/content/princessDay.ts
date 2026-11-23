@@ -4,7 +4,7 @@
  * Everything in this file is a PLACEHOLDER to be refined together.
  * Tone: sweet, funny, lightly teasing, subtly flirty, genuine. Never heavy.
  *
- * Photos: put files in /public/photos and set `src: '/photos/01.jpg'`.
+ * The Garden of Wishes (Chapter IV) has its own content file: src/content/garden.ts
  */
 
 export type CrystalHue = 'sapphire' | 'ice' | 'cyan' | 'lavender' | 'silver';
@@ -16,13 +16,6 @@ export interface CrystalContent {
   /** Shape variation, 0–4 */
   shape: number;
   message: string;
-}
-
-export interface Photo {
-  /** Leave empty ('') to show an elegant placeholder frame (dev builds only). */
-  src: string;
-  alt: string;
-  caption?: string;
 }
 
 export const princessDay = {
@@ -88,19 +81,6 @@ export const princessDay = {
     { id: 'h3', text: '[Placeholder] This one was hidden especially well. Apparently not well enough.' },
     { id: 'h4', text: '[Placeholder] Last secret. Or is it?' },
   ],
-
-  gallery: {
-    title: 'The Little Moments',
-    subtitle: 'A few frames worth keeping.', // PLACEHOLDER
-    /** In production builds the section is hidden while no photo has a `src`. */
-    hideWhenEmpty: true,
-    photos: [
-      { src: '', alt: 'Photograph 1', caption: 'Caption one' },
-      { src: '', alt: 'Photograph 2', caption: 'Caption two' },
-      { src: '', alt: 'Photograph 3', caption: 'Caption three' },
-      { src: '', alt: 'Photograph 4', caption: 'Caption four' },
-    ] satisfies Photo[],
-  },
 
   closing: {
     title: 'Happy Princess Day, Princess Prism.',
