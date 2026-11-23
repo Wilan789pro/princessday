@@ -9,7 +9,7 @@ React + TypeScript + Vite + Framer Motion. Synthesised Web Audio, so there are n
 ```bash
 npm install
 npm run dev        # http://localhost:5173 (also on your LAN, so you can open it on a phone)
-npm test           # dates, countdown, birthday gate, wish rules, wish endpoint, bouquet & certificate
+npm test           # dates, countdown, birthday gate, wishes, vault, reset, bouquet & certificate
 npm run build      # typecheck + production build into dist/
 ```
 
@@ -64,33 +64,73 @@ It sits where the photo gallery used to be (`src/components/Garden/`), between t
 - PNGs are generated on the device: iPhone gets the share sheet ("Save Image"), and computers get a normal download.
 - Nothing is uploaded.
 
-### Wishes (`/api/wish`)
-**What happens today:**
-- **On GitHub Pages without a backend (the current live site):** nothing is sent. The page says delivery is not connected, and the wish is not sent or saved.
-- **With a backend whose email isn't configured:** dry-run. The server checks the wish, then discards it. Nothing is emailed or saved, and the page says so.
-- **The wealth joke is detected in the browser *and* on the server** (`shared/wishRules.js`, English + French, accent-insensitive, whole words). A detected wish is never sent anywhere.
-- **Wish text is never stored, logged or shown back.** Email, when enabled, is plain text, exactly as she wrote it.
+### Wishes and the Royal Wish Vault
+
+**What she sees:** a wish is sent to a private backend and stored there. The page tells her before she sends: "Sending delivers your wish privately to the person who made this garden. It is never shown on this website, and it cannot be reopened here once sent."
+- The page shows success **only after the server confirms the wish is stored**. Then it clears the box and shows: *"Your wish has found its way to the stars. Some wishes are meant to travel quietly. Thank you for sharing yours."*
+- **If storing fails,** there is no success message. The page says the wish was not sent and keeps her text so she can try again.
+- **The wealth joke** is caught in the browser *and* on the server (`shared/wishRules.js`, English + French, accent-insensitive, whole words). A caught wish gets the playful reply and is never sent or stored.
+- **Limit:** 500 characters.
+- **No email** is involved anywhere.
+- **She cannot reopen or browse wishes:** nothing is saved in her browser, and reading wishes needs the owner's access code.
+
+**Where wishes are stored:** in an [Upstash Redis](https://upstash.com) database through its REST API (`server/wishStore.js`, no SDK).
+- Each wish is a hash at `prism:vault:wish:<id>` holding its text, time and read status. A sorted set, `prism:vault:index`, keeps them in order.
+- **Never used for wishes:** `localStorage`, `sessionStorage`, the serverless filesystem, or any file in this repository.
+- **Without a configured database, the production server refuses wishes** (503 `storage-unavailable`), so a wish can never be "sent" into nowhere.
+- `npm run dev` uses a temporary in-memory store for testing.
+
+**Opening the vault (owner only):**
+1. On the first screen (the live clock), tap the **glowing sapphire above the clock five times within about three seconds**. There is no visible link, button or hint.
+2. Enter the access code. It is checked only on the server, against the private `VAULT_ACCESS_CODE` environment variable. The code is never in the frontend or the repository.
+3. **Security:**
+   - The check is constant-time.
+   - 5 wrong codes from the same network lock the login for 15 minutes.
+   - A correct code returns a signed session token that lasts 2 hours and is kept **only in page memory**: it is never saved, and there are no cookies.
+   - **Lock & leave**, closing the vault or pressing Esc revokes the session on the server.
+
+**The inbox:**
+- Every wish, newest first, with its date and time (Mauritius) and a read or unread badge.
+- Opening a wish marks it as read; it can be marked unread again.
+- **Delete** asks for confirmation first, then deletes the wish permanently.
+- The vault UI is a separate, lazily loaded chunk (`src/components/Vault/`). It is only downloaded after the five-tap gesture.
+
+**Resetting the experience (inside the vault, "Control room"):** **RESET ENTIRE EXPERIENCE** asks for confirmation first. It then restores the first-visit state everywhere:
+1. **The server** changes one marker, `prism:experience-epoch`. That is the only key the reset writes.
+2. **This browser:** every `prism:*` key in `localStorage` and `sessionStorage` is removed (the full list is in `src/utils/experienceState.ts`, and a test checks the source code for any key missing from it):
+   - `prism:reached25` (skip link)
+   - `prism:star-entrance:v1` (one-time entrance)
+   - `prism:bouquet`
+   - `prism:garden-secrets`
+   - `prism:sound`
+3. Then it logs out and returns to the start.
+4. **Every other device** checks the marker (`GET /api/experience`) when the site loads. If the marker changed, the device clears its own progress the same way and restarts from the beginning.
+
+**What the reset never touches:** wishes, their read or unread status, the access code, and any server setting or credential. Tests check this command by command against a fake Redis.
 
 **How the pieces fit:**
-- **Frontend** (`src/garden/wishClient.ts`, `src/utils/hosting.ts`): sends to `VITE_API_BASE_URL` + `/api/wish` when that **public** setting is present. Otherwise it uses the same-origin server (dev, preview, Vercel), or nothing at all on GitHub Pages.
-- **Backend** (`server/wishHandler.js` through `api/wish.js`):
-  - **Cross-origin access** for the origins in `WISH_ALLOWED_ORIGINS` only. It handles the browser's OPTIONS preflight check; any other origin gets a 403.
-  - **Size limit:** 413 for bodies over 2 KB.
-  - **Checks:** JSON only, a honeypot field, a minimum compose time, validation, the wealth check, then rate limits.
-  - **Rate limits:** 5 per hour per IP and 40 per day overall, **in memory, so best-effort only**. Use the host's firewall or a shared store for strong limits.
-  - **Startup warnings:** if email delivery is only partly configured, it logs the **names** of the missing settings (never their values). It also warns when delivery is on but `WISH_ALLOWED_ORIGINS` is empty.
-  - **Error messages:** every error code has a friendly message that says the wish was not sent.
+- **Frontend:** `src/garden/wishClient.ts`, `src/vault/vaultClient.ts` and `src/utils/experienceState.ts`. They call `VITE_API_BASE_URL` + `/api/…` when that **public** setting is present, otherwise the same-origin server (dev, preview, Vercel). On GitHub Pages without it, nothing is called, and the page honestly says delivery is not connected.
+- **Backend:** `api/wish.js`, `api/vault.js` and `api/experience.js`, which pass requests to `server/wishHandler.js`, `server/vaultHandler.js` and `server/experienceHandler.js`.
+  - **Cross-origin access:** only the origins in `WISH_ALLOWED_ORIGINS`, with an OPTIONS preflight. Other origins get a 403.
+  - **Requests:** JSON only, 2 KB maximum.
+  - **Wish checks:** a honeypot field, a minimum compose time and the validation rules.
+  - **Rate limits:** stored in the database. 5 wishes per hour per network (the IP address is hashed, never stored) and 40 per day overall.
+  - **Logging:** wish text and codes are never logged.
 
-**Still needed for real delivery** (not done; needs your accounts and approval):
-1. **Host the API** somewhere that runs Node functions, separately from Pages. Vercel works as-is: import this repository as a Vercel project; it serves `api/wish.js` (and the birthday API) from `vercel.json`.
-2. **Email provider:** create a [Resend](https://resend.com) account and an API key. Sending requires a **verified sender domain** you control (a `github.io` address cannot be verified). Check Resend's current rules for its test sender.
-3. **Set the backend's private settings** in the host's environment settings, never in the repo:
-   - `RESEND_API_KEY`
-   - `WISH_TO_EMAIL`: the inbox that receives wishes
-   - `WISH_FROM_EMAIL`: an address on the verified domain
-   - `WISH_ALLOWED_ORIGINS=https://wilan789pro.github.io`
-4. **Point the site at the API:** in GitHub, *Settings → Secrets and variables → Actions → **Variables***, add `VITE_API_BASE_URL` = the backend's address (e.g. `https://your-api.vercel.app`). Then re-run the Pages workflow. It is public configuration, not a secret.
-5. **Test** with your own wish, and only then share the site.
+**Backend settings** (private: set in the host's environment settings, never in the repository; see `.env.example`):
+
+| Setting | What it is |
+|---|---|
+| `VAULT_ACCESS_CODE` | The code that opens the vault. Choose a long one. |
+| `VAULT_SESSION_SECRET` | A long random string used to sign sessions. If it is missing, the access code is used instead. |
+| `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN` | The database. Vercel's Upstash integration sets `KV_REST_API_URL` / `KV_REST_API_TOKEN` instead; both pairs work. |
+| `WISH_ALLOWED_ORIGINS` | `https://wilan789pro.github.io` |
+
+**Still needed to switch it on** (needs your accounts; not done):
+1. **Database:** create a free Upstash Redis database (or, in Vercel, *Storage → Upstash for Redis*). Copy its REST URL and token.
+2. **API host:** import this repository as a Vercel project. It serves `api/*.js` from `vercel.json`. Add the four settings above in *Settings → Environment Variables*, then deploy it.
+3. **Point the site at the API:** in GitHub, open *Settings → Secrets and variables → Actions → **Variables*** and add `VITE_API_BASE_URL` (the Vercel address, e.g. `https://your-api.vercel.app`). It is public configuration, not a secret. It takes effect at the next Pages build (a merge into `main`).
+4. **Test it yourself:** send a wish, open the vault, read the wish, delete it. Only then share the site.
 
 ### Birthday content (server-protected)
 > ⚠️ **The GitHub repository is public.** Anything committed, including `server/birthday-content.json` and `server/birthday-assets/`, is publicly readable, and stays in Git history even if deleted later. The committed file must stay the development placeholder (a test enforces `_placeholder: true`). Real birthday content needs a private source (for example a server environment variable or private storage), which has **not been set up yet**.
@@ -156,7 +196,7 @@ Nothing is deployed until you merge into `main` (GitHub Pages) or run a hosting 
 | Intro, rewind, Princess Day, crystals, compliments, decree, glints, closing, One More Thing, dates | ✅ works |
 | Garden: bloom, bouquet studio + PNG, certificate + PNG, bouquet saved in the browser | ✅ works (all local) |
 | Wish: the wealth joke and validation | ✅ works (local) |
-| Wish delivery | ❌ not connected until `VITE_API_BASE_URL` points to a separately hosted API (see *Wishes*). Until then the page says so and nothing is sent or saved |
+| Wish delivery, the Royal Wish Vault and RESET ENTIRE EXPERIENCE | ❌ not connected until `VITE_API_BASE_URL` points to a separately hosted API (see *Wishes and the Royal Wish Vault*). Until then the page says so; nothing is sent or saved |
 | THE 25th STAR countdown, one-time entrance and the chamber animation | ✅ works, using the **phone's** clock (no server time correction) |
 | Birthday content in the 25th Chamber | ❌ no server to release it. After opening, the chamber says its private messenger is not connected yet |
 
@@ -167,4 +207,4 @@ Nothing is deployed until you merge into `main` (GitHub Pages) or run a hosting 
 2. Host the whole site where the existing `api/` functions run (`vercel.json` is already set up), with the content supplied privately, not committed.
 
 ### Vercel (with the API)
-`vercel` from this folder deploys both the site and the `api/` functions (normal build, base `/`). Not used yet. Pages are marked `noindex`.
+`vercel` from this folder deploys both the site and the `api/` functions (`wish`, `vault`, `experience`, `birthday`; normal build, base `/`). Not used yet. Pages are marked `noindex`.
